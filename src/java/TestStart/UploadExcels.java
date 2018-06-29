@@ -46,12 +46,18 @@ public class UploadExcels extends HttpServlet {
   private static final long serialVersionUID = 205242440643911308L;
   private static final String UPLOAD_DIR = "uploads";
 SimpleDateFormat dateformat = new SimpleDateFormat("yyyy-MM-dd");
+int row_skipped,rows_added,skipped_info;
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException, SQLException {
-      session = request.getSession();
-      dbConn conn = new dbConn();
             session = request.getSession();
+            dbConn conn = new dbConn();
+      
             JSONObject finalobj = new JSONObject();
+            JSONObject objacc4link = new JSONObject();
+            JSONObject objteststart = new JSONObject();
+            JSONObject objartcurr = new JSONObject();
+
+            
             JSONArray jarray = new JSONArray();
        
             
@@ -90,11 +96,13 @@ SimpleDateFormat dateformat = new SimpleDateFormat("yyyy-MM-dd");
        XSSFSheet worksheetARTLoss = workbook.getSheet("3b. ART Current Net Loss-Var ");
 
        
-       
+//       fOR xlsx fILES
 //        Account4LinkageValidationXLSX(worksheetAccValid,conn);
-        Accounting4LinkageSummaryXLSX(worksheetAcc4Link,conn);
-        TestStartSummaryXLSX(worksheetTestStart,conn);
-        ARTCurrentLossXLSX(worksheetARTLoss,conn);  
+      objacc4link = Accounting4LinkageSummary(worksheetAcc4Link,conn);
+      objteststart = TestStartSummary(worksheetTestStart,conn);
+      objartcurr = ARTCurrentLoss(worksheetARTLoss,conn);
+      
+      System.out.println("artcurr: "+objartcurr);
        }
        else if(fileName.endsWith(".xls")){
        HSSFWorkbook workbook = new HSSFWorkbook(fileInputStream);
@@ -104,9 +112,11 @@ SimpleDateFormat dateformat = new SimpleDateFormat("yyyy-MM-dd");
        HSSFSheet worksheetARTLoss = workbook.getSheet("3b. ART Current Net Loss-Var ");
        
 //        Account4LinkageValidationXLS(worksheetAccValid,conn);
-        Accounting4LinkageSummaryXLS(worksheetAcc4Link,conn);
-        TestStartSummaryXLS(worksheetTestStart,conn);
-        ARTCurrentLossXLS(worksheetARTLoss,conn);     
+      objacc4link = Accounting4LinkageSummary(worksheetAcc4Link,conn);
+      objteststart = TestStartSummary(worksheetTestStart,conn);
+      objartcurr = ARTCurrentLoss(worksheetARTLoss,conn);  
+      
+      System.out.println("artcurr: "+objartcurr);
        }
        else{
            System.out.println("unsupported file type");
@@ -118,9 +128,13 @@ SimpleDateFormat dateformat = new SimpleDateFormat("yyyy-MM-dd");
         }
    
         }
+       jarray.add(objacc4link);
+       jarray.add(objteststart);
+       jarray.add(objartcurr);
         
-        System.out.println("errors : "+finalobj);
-//        session.setAttribute("upload_errors", finalobj);
+        
+        System.out.println("errors : "+jarray);
+        session.setAttribute("upload_errors", jarray);
       
       
       response.sendRedirect("ExcelUpload.jsp");
@@ -509,10 +523,13 @@ else{
       return num;
     }
  
-    public int Accounting4LinkageSummaryXLSX (XSSFSheet worksheet, dbConn conn) throws SQLException{
+    public JSONObject Accounting4LinkageSummary (XSSFSheet worksheet, dbConn conn) throws SQLException{
+        String all_error_details = "<thead class=\"thead-dark\"><tr><th>Row Number</th><th>County</th><th>Sub-County</th><th>Health Facility</th><th>MFL Code</th><th>Date confirmed HIV positive</th><th>Gender</th><th>Current Age</th><th>Documented in linkage register</th><th>Patient CCC Number</th><th>Enrolment Date</th><th>Referred</th><th>Enrolled to other site</th><th>Enrolled from other site</th><th>ART start date</th><th>Started ART in this facility</th><th>Started in other facility</th><th>Patient Status</th><th>If declined, indicate reason</th><th>If dead, indicate reported  cause of death</th></tr></thead><tbody>";
         String id="",period_details="",year="",month="",county="",sub_county="",facility="",mfl_code="",date_confirmed_hiv_pos="",gender="",current_age="",documented_linkage_register="",ccc_no="",enrollment_date="",referred="",enrolled_to_other_site="",enrolled_from_other_site="",art_start_date="",started_art_in_this_facility="",started_art_in_other_facility="",patient_status="",declined_reason="",reported_cause_of_death="",yearmonth="";
-
-      int num=0;
+        JSONObject obj_det = new JSONObject();
+         String error_details="",period_error = "Error While loading <b>1b. Accounting for Linkage</b> Sheet: <br>";
+        boolean has_error=false;
+        
         Iterator rowIterator = worksheet.iterator();
 
          XSSFRow row = worksheet.getRow(2);
@@ -529,6 +546,10 @@ else{
                        break;
                    
                }
+            if(month.equals("") || cellmn==null){
+               has_error=true;  
+               period_error+="Missing Month <br>";
+            }
 // **************************************************************************           
 // **************************************Year***********************
             XSSFCell cellyr = row.getCell((short) 12);
@@ -542,6 +563,10 @@ else{
                        year =cellyr.getStringCellValue();
                        break;
                }
+            if(year.equals("") || cellyr==null){
+               has_error=true;  
+               period_error+="Missing Year <br>";
+            }
 // **************************************************************************           
             System.out.println("perid details : "+period_details);
             
@@ -556,9 +581,12 @@ else{
             System.out.println("perid details : yearmonth : "+yearmonth+" year : "+year+" month :: "+month);
 //*******************************YearMonth************************
 
-        
-        int i=1,y=0;
+        if(!has_error){
+        int i=5,y=0,skipped_records=0,added_records=0;
         while(rowIterator.hasNext()){
+            error_details = "";
+            has_error=false;
+        
             id=period_details=county=sub_county=facility=mfl_code=date_confirmed_hiv_pos=gender=current_age=documented_linkage_register=ccc_no=enrollment_date=referred=enrolled_to_other_site=enrolled_from_other_site=art_start_date=started_art_in_this_facility=started_art_in_other_facility=patient_status=declined_reason=reported_cause_of_death="";
 
              XSSFRow rowi = worksheet.getRow(i);
@@ -568,6 +596,7 @@ else{
 
 // **************************************County***********************
             XSSFCell cell0 = rowi.getCell((short) 0);
+              if(cell0!=null){
             switch (cell0.getCellType()) {
                    case 0:
                        //numeric
@@ -579,10 +608,13 @@ else{
                        break;
                   
                }
+        }
+            error_details+="<td>"+county+"</td>";
 //*******************************End of county************************
                
 // **************************************Sub county***********************
             XSSFCell cell1 = rowi.getCell((short) 1);
+              if(cell1!=null){
             switch (cell1.getCellType()) {
                    case 0:
                        //numeric
@@ -594,10 +626,13 @@ else{
                        break;
                    
                }
+        }
+            error_details+="<td>"+sub_county+"</td>";
 //*******************************End of sub-county************************
 
 // **************************************Facility Name***********************
             XSSFCell cell2 = rowi.getCell((short) 2);
+              if(cell2!=null){
             switch (cell2.getCellType()) {
                    case 0:
                        //numeric
@@ -609,10 +644,13 @@ else{
                        break;
                    
                }
+        }
+            error_details+="<td>"+facility+"</td>";
 //*******************************End of facility name************************;
                
 // **************************************mflcode***********************
             XSSFCell cell3 = rowi.getCell((short) 3);
+              if(cell3!=null){
             switch (cell3.getCellType()) {
                    case 0:
                        //numeric
@@ -623,24 +661,36 @@ else{
                        mfl_code =cell3.getStringCellValue();
                        break;
                }
+            }
+             else{
+                has_error=true;
+            }
+            if(mfl_code.equals("")){
+               has_error=true;  
+            }
+            error_details+="<td>"+ccc_no+"</td>";
 //*******************************End of mflcode************************
 
 // **************************************date confirmed HIV pos***********************
-if(rowi.getCell(4).getCellType()==0){
-  date_confirmed_hiv_pos =""+(int)rowi.getCell(4).getNumericCellValue();  
-}
-else{
+        if(rowi.getCell(4)!=null){
+        if(rowi.getCell(4).getCellType()==0){
+          date_confirmed_hiv_pos =""+(int)rowi.getCell(4).getNumericCellValue();  
+        }
+        else{
            if (rowi.getCell(4).getCellTypeEnum().equals(NUMERIC)) {
             date_confirmed_hiv_pos = dateformat.format(rowi.getCell(4).getDateCellValue());
         }
         else{
          date_confirmed_hiv_pos = rowi.getCell(4).getStringCellValue();
         }
-}
+    }
+        }
+            error_details+="<td>"+date_confirmed_hiv_pos+"</td>";
 //*******************************End of date confirmed HIV pos************************
                
 // **************************************gender***********************
             XSSFCell cell5 = rowi.getCell((short) 5);
+              if(cell5!=null){
             switch (cell5.getCellType()) {
                    case 0:
                        //numeric
@@ -651,11 +701,14 @@ else{
                        gender =cell5.getStringCellValue();
                        break;
                }
+              }
+            error_details+="<td>"+gender+"</td>";
 //*******************************End of gender************************
 
                
 // **************************************current age***********************
             XSSFCell cell6 = rowi.getCell((short) 6);
+              if(cell6!=null){
             switch (cell6.getCellType()) {
                    case 0:
                        //numeric
@@ -667,10 +720,13 @@ else{
                        break;
                    
                }
+              }
+            error_details+="<td>"+current_age+"</td>";
 //*******************************End of current age************************
              
 // **************************************documented in linked register***********************
             XSSFCell cell7 = rowi.getCell((short) 7);
+            if(cell7!=null){
             switch (cell7.getCellType()) {
                    case 0:
                        //numeric
@@ -682,10 +738,13 @@ else{
                        break;
                   
                }
+            }
+            error_details+="<td>"+documented_linkage_register+"</td>";
 //*******************************End of documented in linked register************************
                
 // **************************************patient ccc number***********************
             XSSFCell cell8 = rowi.getCell((short) 8);
+            if(cell8!=null){
             switch (cell8.getCellType()) {
                    case 0:
                        //numeric
@@ -697,10 +756,19 @@ else{
                        break;
                   
                }
+            }
+             else{
+                has_error=true;
+            }
+            if(ccc_no.equals("")){
+               has_error=true;  
+            }
+            error_details+="<td>"+ccc_no+"</td>";
 //*******************************End of patient ccc number************************
 
 
 // **************************************enrollment date***********************
+    if(rowi.getCell(9)!=null){
   if(rowi.getCell(9).getCellType()==0){
   enrollment_date =""+(int)rowi.getCell(9).getNumericCellValue();  
     }
@@ -712,11 +780,14 @@ else{
          enrollment_date = rowi.getCell(9).getStringCellValue();
         }
 }
+        }
+            error_details+="<td>"+enrollment_date+"</td>";
 //*******************************End of enrollment date************************
 
 
 // **************************************referred***********************
             XSSFCell cell10 = rowi.getCell((short) 10);
+            if(cell10!=null){
             switch (cell10.getCellType()) {
                    case 0:
                        //numeric
@@ -727,12 +798,14 @@ else{
                        referred =cell10.getStringCellValue();
                        break;
                    
-               }
+               } }
+            error_details+="<td>"+referred+"</td>";
 //*******************************End of referred************************
 
 
 // **************************************linked to other sites***********************
             XSSFCell cell11 = rowi.getCell((short) 11);
+            if(cell11!=null){
             switch (cell11.getCellType()) {
                    case 0:
                        //numeric
@@ -743,12 +816,14 @@ else{
                        enrolled_to_other_site =cell11.getStringCellValue();
                        break;
                    
-               }
+               } }
+            error_details+="<td>"+enrolled_to_other_site+"</td>";
 //*******************************End of linked to other site************************
 
 
 // **************************************linked from other sites***********************
             XSSFCell cell12 = rowi.getCell((short) 12);
+            if(cell12!=null){
             switch (cell12.getCellType()) {
                    case 0:
                        //numeric
@@ -759,11 +834,12 @@ else{
                        enrolled_from_other_site =cell12.getStringCellValue();
                        break;
                   
-               }
+               }}
+            error_details+="<td>"+enrolled_from_other_site+"</td>";
 //*******************************End of linked from other sites************************
 
-
 // **************************************art start date***********************
+    if(rowi.getCell(13)!=null){
      if(rowi.getCell(13).getCellType()==0){
   art_start_date =""+(int)rowi.getCell(13).getNumericCellValue();  
     }
@@ -775,12 +851,14 @@ else{
          art_start_date = rowi.getCell(13).getStringCellValue();
         }
 }
-              
+    }
+            error_details+="<td>"+art_start_date+"</td>";          
 //*******************************End of art start date************************
 
 
 // **************************************started art in this facility***********************
             XSSFCell cell14 = rowi.getCell((short) 14);
+        if(cell14!=null){
             switch (cell14.getCellType()) {
                    case 0:
                        //numeric
@@ -791,12 +869,14 @@ else{
                        started_art_in_this_facility =cell14.getStringCellValue();
                        break;
                    
-               }
+               }}
+            error_details+="<td>"+started_art_in_this_facility+"</td>";   
 //*******************************End of started art in this facility************************
 
 
 // **************************************started art in other facility***********************
             XSSFCell cell15 = rowi.getCell((short) 15);
+            if(cell15!=null){
             switch (cell15.getCellType()) {
                    case 0:
                        //numeric
@@ -807,12 +887,14 @@ else{
                        started_art_in_other_facility =cell15.getStringCellValue();
                        break;
                    
-               }
+               }}
+            error_details+="<td>"+started_art_in_other_facility+"</td>"; 
 //*******************************End of started art in other facility************************
 
 
 // **************************************patient status***********************
             XSSFCell cell16 = rowi.getCell((short) 16);
+            if(cell16!=null){
             switch (cell16.getCellType()) {
                    case 0:
                        //numeric
@@ -823,12 +905,14 @@ else{
                        patient_status =cell16.getStringCellValue();
                        break;
                    
-               }
+               }}
+            error_details+="<td>"+patient_status+"</td>"; 
 //*******************************End of patient status************************
 
 
 // **************************************if declined indicate reason***********************
             XSSFCell cell17 = rowi.getCell((short) 17);
+            if(cell17!=null){
             switch (cell17.getCellType()) {
                    case 0:
                        //numeric
@@ -839,7 +923,8 @@ else{
                        declined_reason =cell17.getStringCellValue();
                        break;
                    
-               }
+               }}
+            error_details+="<td>"+declined_reason+"</td>"; 
 //*******************************End of if declined indicate reason************************
 
 
@@ -858,6 +943,7 @@ else{
                    
                }
             }
+            error_details+="<td>"+reported_cause_of_death+"</td>"; 
 //*******************************End of reported cause of death************************
 
 //     generate id
@@ -865,7 +951,12 @@ else{
             id = mfl_code+"_"+yearmonth+"_"+ccc_no;
 
       //       END OF READING VALUES
-
+    if(has_error){
+      all_error_details+="<tr><td>"+i+"</td>"+error_details+"</tr>"; 
+      skipped_records++;
+    }
+    else{
+        added_records++;
             //GET CORRECT COUNTY, SUBCOUNTY DATA FOR THIS FACILITY
             JSONObject obj_facil = GetFacilityDetails(conn, mfl_code);
             
@@ -902,29 +993,1113 @@ else{
                 conn.pst.executeUpdate();
             
                 System.out.println("query : "+conn.pst);
-            num += conn.pst.executeUpdate();
-              if(num>0){
-                 
-              }  
-              else{
-                
+            conn.pst.executeUpdate();
+           }
+            else{
+               
+            }
+        }
+//***************************************************************************
+        i++;
+        }
+               
+     obj_det.put("added", added_records);
+     obj_det.put("skipped", skipped_records);
+     obj_det.put("skipped_details", all_error_details+"</tbody>");
+    }
+          else { //has errors while loading excel
+          obj_det.put("period_error", period_error);       
+            }
+             obj_det.put("sheetname", "1b. Accounting for Linkage");
+     
+        
+      
+      return obj_det;
+    }
+    public JSONObject TestStartSummary (XSSFSheet worksheet, dbConn conn) throws SQLException{
+        String all_error_details="<thead class=\"thead-dark\"><tr><th>Row Number</th><th>County</th><th>Subcounty</th><th>Health Facility</th><th>MFL Code</th><th>Patient CCC Number</th><th>Gender</th><th>Current Age</th><th>Date confirmed HIV Positive</th><th>Enrollment date</th><th>ART start date</th><th>Baseline WHO Stage</th><th>Baseline CD4 Count or Percent</th><th>Initial VL Result</th><th>Initial Vl Date</th><th>Repeat VL  result</th><th>Repeat VL date</th><th>VL result at 12 months</th><th>12 month Vl Date</th><th>Last visit date</th><th>Patient Outcome</th></tr></thead><tbody>";
+      String id="",year="",month="",county="",sub_county="",facility="",mfl_code="",ccc_no="",gender="",current_age="",date_confirmed_hiv_pos="",enrollment_date="",art_start_date="",baseline_who_stage="",baseline_cd4_cell_count_perc="",initial_vl="",initial_vl_date="",repeat_vl_value="",repeat_vl_date="",vl_12_months_value="",vl_12_months_date="",last_visit_date="",patient_outcome="",yearmonth="";
+       JSONObject obj_det = new JSONObject();
+        String error_details="",period_error = "Error While loading <b>2b.Test & Start -Cohort Summary</b> Sheet: <br>";
+        boolean has_error=false;
+        
+        Iterator rowIterator = worksheet.iterator();
+
+         XSSFRow row = worksheet.getRow(2);
+// **************************************Month***********************
+            XSSFCell cellmn = row.getCell((short) 4);
+            if(cellmn!=null){
+            switch (cellmn.getCellType()) {
+                   case 0:
+                       //numeric
+                       month =""+(int)cellmn.getNumericCellValue();
+                       break;
+                   case 1:
+                       //string
+                       month =cellmn.getStringCellValue();
+                       break;
+                   
+               }
+            }
+            if(month.equals("") || cellmn==null){
+               has_error=true;  
+               period_error+="Missing Month <br>";
+            }
+// **************************************************************************           
+// **************************************Year***********************
+            XSSFCell cellyr = row.getCell((short) 11);
+            if(cellyr!=null){
+            switch (cellyr.getCellType()) {
+                   case 0:
+                       //numeric
+                       year =""+(int)cellyr.getNumericCellValue();
+                       break;
+                   case 1:
+                       //string
+                       year =cellyr.getStringCellValue();
+                       break;
+               }
+        }
+            if(year.equals("") || cellyr==null){
+               has_error=true;  
+               period_error+="Missing Year <br>";
+            }
+// ************************************************************************** 
+            
+            JSONObject period_data = CleanPeriod(year,month,conn);
+            
+            yearmonth = period_data.get("yearmonth").toString();
+            year = period_data.get("year").toString();
+            month = period_data.get("month").toString();
+            
+                    
+            
+            System.out.println("yearmonth : "+yearmonth+" year : "+year+" month :: "+month);
+//*******************************YearMonth************************
+
+        
+         if(!has_error){
+        int i=5,y=0,skipped_records=0,added_records=0;
+        while(rowIterator.hasNext()){
+            error_details = "";
+            has_error=false;
+        
+            id=county=sub_county=facility=mfl_code=ccc_no=gender=current_age=date_confirmed_hiv_pos=enrollment_date=art_start_date=baseline_who_stage=baseline_cd4_cell_count_perc=initial_vl=initial_vl_date=repeat_vl_value=repeat_vl_date=vl_12_months_value=vl_12_months_date=last_visit_date=patient_outcome="";
+      
+             XSSFRow rowi = worksheet.getRow(i);
+                if(rowi==null){
+                 break;
+                }
+
+// **************************************County***********************
+            XSSFCell cell0 = rowi.getCell((short) 0);
+            if(cell0!=null){
+            switch (cell0.getCellType()) {
+                   case 0:
+                       //numeric
+                       county =""+(int)cell0.getNumericCellValue();
+                       break;
+                   case 1:
+                       //string
+                       county =cell0.getStringCellValue();
+                       break;
+                  
+               }
+            }
+            
+            error_details+="<td>"+county+"</td>";
+//*******************************End of county************************
+               
+// **************************************Sub county***********************
+            XSSFCell cell1 = rowi.getCell((short) 1);
+            if(cell1!=null){
+            switch (cell1.getCellType()) {
+                   case 0:
+                       //numeric
+                       sub_county =""+(int)cell1.getNumericCellValue();
+                       break;
+                   case 1:
+                       //string
+                       sub_county =cell1.getStringCellValue();
+                       break;
+                   
+               }
+            }
+             
+            error_details+="<td>"+sub_county+"</td>";
+//*******************************End of sub-county************************
+
+// **************************************Facility Name***********************
+            XSSFCell cell2 = rowi.getCell((short) 2);
+            if(cell2!=null){
+            switch (cell2.getCellType()) {
+                   case 0:
+                       //numeric
+                       facility =""+(int)cell2.getNumericCellValue();
+                       break;
+                   case 1:
+                       //string
+                       facility =cell2.getStringCellValue();
+                       break;
+                   
+               }
+            }
+            
+            error_details+="<td>"+facility+"</td>";
+//*******************************End of facility name************************;
+               
+// **************************************mflcode***********************
+            XSSFCell cell3 = rowi.getCell((short) 3);
+            if(cell3!=null){
+            switch (cell3.getCellType()) {
+                   case 0:
+                       //numeric
+                       mfl_code =""+(int)cell3.getNumericCellValue();
+                       break;
+                   case 1:
+                       //string
+                       mfl_code =cell3.getStringCellValue();
+                       break;
+               }
+            }
+             else{
+                has_error=true;
+            }
+            if(mfl_code.equals("")){
+               has_error=true;  
+            }
+            error_details+="<td>"+mfl_code+"</td>";
+//*******************************End of mflcode************************
+
+// **************************************CCC Number***********************
+        
+            XSSFCell cell4 = rowi.getCell((short) 4);
+            if(cell4!=null){
+            switch (cell4.getCellType()) {
+                   case 0:
+                       //numeric
+                       ccc_no =""+(int)cell4.getNumericCellValue();
+                       break;
+                   case 1:
+                       //string
+                       ccc_no =cell4.getStringCellValue();
+                       break;
+               }
+            }
+             else{
+                has_error=true;
+            }
+            if(ccc_no.equals("")){
+               has_error=true;  
+            }
+            error_details+="<td>"+ccc_no+"</td>";
+//*******************************End of ccc number************************
+               
+// **************************************gender***********************
+            XSSFCell cell5 = rowi.getCell((short) 5);
+            if(cell5!=null){
+            switch (cell5.getCellType()) {
+                   case 0:
+                       //numeric
+                       gender =""+(int)cell5.getNumericCellValue();
+                       break;
+                   case 1:
+                       //string
+                       gender =cell5.getStringCellValue();
+                       break;
+               }
+            }
+            
+            error_details+="<td>"+gender+"</td>";
+//*******************************End of gender************************
+
+               
+// **************************************current age***********************
+            XSSFCell cell6 = rowi.getCell((short) 6);
+            if(cell6!=null){
+            switch (cell6.getCellType()) {
+                   case 0:
+                       //numeric
+                       current_age =""+(int)cell6.getNumericCellValue();
+                       break;
+                   case 1:
+                       //string
+                       current_age =cell6.getStringCellValue();
+                       break;
+                   
+               }
+            }
+             error_details+="<td>"+current_age+"</td>";
+//*******************************End of current age************************
+             
+// **************************************date confirmed HIV+***********************
+           if(rowi.getCell(7)!=null){
+if(rowi.getCell(7).getCellType()==0){
+          date_confirmed_hiv_pos =""+(int)rowi.getCell(7).getNumericCellValue();  
+        }
+        else{
+           if (rowi.getCell(7).getCellTypeEnum().equals(NUMERIC)) {
+            date_confirmed_hiv_pos = dateformat.format(rowi.getCell(7).getDateCellValue());
+        }
+        else{
+         date_confirmed_hiv_pos = rowi.getCell(7).getStringCellValue();
+        }
+    }
+           }
+            error_details+="<td>"+date_confirmed_hiv_pos+"</td>";
+//*******************************End of DATE CONFIRMED hiv pos************************
+               
+// **************************************enrollment date***********************
+if(rowi.getCell(8)!=null){
+          if(rowi.getCell(8).getCellType()==0){
+          enrollment_date =""+(int)rowi.getCell(8).getNumericCellValue();  
+        }
+        else{
+           if (rowi.getCell(8).getCellTypeEnum().equals(NUMERIC)) {
+            enrollment_date = dateformat.format(rowi.getCell(8).getDateCellValue());
+        }
+        else{
+         enrollment_date = rowi.getCell(8).getStringCellValue();
+        }
+    }
+ }
+ error_details+="<td>"+enrollment_date+"</td>";
+//*******************************End of enrollment date************************
+
+
+// **************************************ART Start date***********************
+if(rowi.getCell(9)!=null){
+  if(rowi.getCell(9).getCellType()==0){
+  art_start_date =""+(int)rowi.getCell(9).getNumericCellValue();  
+    }
+    else{
+           if (rowi.getCell(9).getCellTypeEnum().equals(NUMERIC)) {
+            art_start_date = dateformat.format(rowi.getCell(9).getDateCellValue());
+        }
+        else{
+         art_start_date = rowi.getCell(9).getStringCellValue();
+        }
+    }
+}
+ error_details+="<td>"+art_start_date+"</td>";
+//*******************************End of art start date************************
+
+// ************************************** baseline WHO stage ***********************
+            XSSFCell cell10 = rowi.getCell((short) 10);
+            if(cell10!=null){
+            switch (cell10.getCellType()) {
+                   case 0:
+                       //numeric
+                       baseline_who_stage =""+(int)cell10.getNumericCellValue();
+                       break;
+                   case 1:
+                       //string
+                       baseline_who_stage =cell10.getStringCellValue();
+                       break;
+                   
+               }
+            }
+             error_details+="<td>"+baseline_who_stage+"</td>";
+//*******************************End of baseline WHO stage************************
+
+
+// **************************************baseline cd4 cell count percentage***********************
+System.out.println("at pos : "+i+" mflcode : "+mfl_code);
+            XSSFCell cell11 = rowi.getCell((short) 11);
+            if(cell11!=null){
+            switch (cell11.getCellType()) {
+                   case 0:
+                       //numeric
+                       baseline_cd4_cell_count_perc =""+(int)cell11.getNumericCellValue();
+                       break;
+                   case 1:
+                       //string
+                       baseline_cd4_cell_count_perc =cell11.getStringCellValue();
+                       break;
+                   
+               }
+            }
+             error_details+="<td>"+baseline_cd4_cell_count_perc+"</td>";
+//*******************************End of baseline cd4 cell count percentage************************
+
+
+// **************************************initial vl***********************
+            XSSFCell cell12 = rowi.getCell((short) 12);
+            if(cell12!=null){
+            switch (cell12.getCellType()) {
+                   case 0:
+                       //numeric
+                       initial_vl =""+(int)cell12.getNumericCellValue();
+                       break;
+                   case 1:
+                       //string
+                       initial_vl =cell12.getStringCellValue();
+                       break;
+                  
+               }
+            }
+             error_details+="<td>"+initial_vl+"</td>";
+//*******************************End of initial vl************************
+
+
+// **************************************art start date***********************
+if(rowi.getCell(13)!=null){
+     if(rowi.getCell(13).getCellType()==0){
+  initial_vl_date =""+(int)rowi.getCell(13).getNumericCellValue();  
+    }
+    else{
+           if (rowi.getCell(13).getCellTypeEnum().equals(NUMERIC)) {
+            initial_vl_date = dateformat.format(rowi.getCell(13).getDateCellValue());
+        }
+        else{
+         initial_vl_date = rowi.getCell(13).getStringCellValue();
+        }
+    }
+}      
+ error_details+="<td>"+initial_vl_date+"</td>";
+//*******************************End of art start date************************
+
+
+// **************************************repeat vl results***********************
+            XSSFCell cell14 = rowi.getCell((short) 14);
+            if(cell14!=null){
+            switch (cell14.getCellType()) {
+                   case 0:
+                       //numeric
+                       repeat_vl_value =""+(int)cell14.getNumericCellValue();
+                       break;
+                   case 1:
+                       //string
+                       repeat_vl_value =cell14.getStringCellValue();
+                       break;
+                   
+               }
+            }
+             error_details+="<td>"+repeat_vl_value+"</td>";
+//*******************************End of repeat vl results************************
+
+
+// **************************************repeat vl date***********************
+        if(rowi.getCell(15)!=null) {  
+          if(rowi.getCell(15).getCellType()==0){
+      repeat_vl_date =""+(int)rowi.getCell(15).getNumericCellValue();  
+        }
+        else{
+               if (rowi.getCell(15).getCellTypeEnum().equals(NUMERIC)) {
+                repeat_vl_date = dateformat.format(rowi.getCell(15).getDateCellValue());
+            }
+            else{
+             repeat_vl_date = rowi.getCell(15).getStringCellValue();
+            }
+    }
+        }
+         error_details+="<td>"+repeat_vl_date+"</td>";
+//*******************************End of repeat vl date************************
+
+// **************************************vl results at 12 months***********************
+            XSSFCell cell16 = rowi.getCell((short) 16);
+            if(cell16!=null){
+            switch (cell16.getCellType()) {
+                   case 0:
+                       //numeric
+                       vl_12_months_value =""+(int)cell16.getNumericCellValue();
+                       break;
+                   case 1:
+                       //string
+                       vl_12_months_value =cell16.getStringCellValue();
+                       break;
+                   
+               }
+            }
+             error_details+="<td>"+vl_12_months_value+"</td>";
+//*******************************End of vl results at 12 months************************
+
+
+// **************************************12 months vl date***********************
+        if(rowi.getCell(17)!=null){
+    if(rowi.getCell(17).getCellType()==0){
+           vl_12_months_date =""+(int)rowi.getCell(17).getNumericCellValue();  
+             }
+             else{
+                if (rowi.getCell(17).getCellTypeEnum().equals(NUMERIC)) {
+                 vl_12_months_date = dateformat.format(rowi.getCell(17).getDateCellValue());
+             }
+             else{
+              vl_12_months_date = rowi.getCell(17).getStringCellValue();
+             }
+     }
+        }
+         error_details+="<td>"+vl_12_months_date+"</td>";
+//*******************************End of 12 months vl date************************
+
+
+// **************************************last vl date***********************
+    if(rowi.getCell(18)!=null){
+                 if(rowi.getCell(18).getCellType()==0){
+            last_visit_date =""+(int)rowi.getCell(18).getNumericCellValue();  
               }
+              else{
+                     if (rowi.getCell(18).getCellTypeEnum().equals(NUMERIC)) {
+                      last_visit_date = dateformat.format(rowi.getCell(18).getDateCellValue());
+                  }
+                  else{
+                   last_visit_date = rowi.getCell(18).getStringCellValue();
+                  }
+          }
+    }
+     error_details+="<td>"+last_visit_date+"</td>";
+//*******************************End of last vl date************************
+
+// **************************************patient outcomes***********************
+            XSSFCell cell19 = rowi.getCell((short) 19);
+            if(cell19!=null){
+            switch (cell19.getCellType()) {
+                   case 0:
+                       //numeric
+                       patient_outcome =""+(int)cell19.getNumericCellValue();
+                       break;
+                   case 1:
+                       //string
+                       patient_outcome =cell19.getStringCellValue();
+                       break;
+                   
+               }
+            }
+             error_details+="<td>"+patient_outcome+"</td>";
+//*******************************End of patient outcomes************************
+
+
+//     generate id
+
+            id = mfl_code+"_"+yearmonth+"_"+ccc_no;
+
+      //       END OF READING VALUES
+    if(has_error){
+      all_error_details+="<tr><td>"+i+"</td>"+error_details+"</tr>"; 
+      skipped_records++;
+    }
+    else{
+        added_records++;
+            //GET CORRECT COUNTY, SUBCOUNTY DATA FOR THIS FACILITY
+            JSONObject obj_facil = GetFacilityDetails(conn, mfl_code);
+            
+            if(obj_facil.containsKey("county")){
+              county = obj_facil.get("county").toString();
+              sub_county = obj_facil.get("sub_county").toString();
+              facility = obj_facil.get("facility").toString();
+
+                String query = "REPLACE INTO test_start_summary SET id=?,year=?,month=?,county=?,sub_county=?,facility=?,mfl_code=?,ccc_no=?,gender=?,current_age=?,date_confirmed_hiv_pos=?,enrollment_date=?,art_start_date=?,baseline_who_stage=?,baseline_cd4_cell_count_perc=?,initial_vl=?,initial_vl_date=?,repeat_vl_value=?,repeat_vl_date=?,vl_12_months_value=?,vl_12_months_date=?,last_visit_date=?,patient_outcome=?,yearmonth=?";
+                conn.pst = conn.conn.prepareStatement(query);
+                conn.pst.setString(1, id);
+                conn.pst.setString(2, year);
+                conn.pst.setString(3, month);
+                conn.pst.setString(4, county);
+                conn.pst.setString(5, sub_county);
+                conn.pst.setString(6, facility);
+                conn.pst.setString(7, mfl_code);
+                conn.pst.setString(8, ccc_no);
+                conn.pst.setString(9, gender);
+                conn.pst.setString(10, current_age);
+                conn.pst.setString(11, date_confirmed_hiv_pos);
+                conn.pst.setString(12, enrollment_date);
+                conn.pst.setString(13, art_start_date);
+                conn.pst.setString(14, baseline_who_stage);
+                conn.pst.setString(15, baseline_cd4_cell_count_perc);
+                conn.pst.setString(16, initial_vl);
+                conn.pst.setString(17, initial_vl_date);
+                conn.pst.setString(18, repeat_vl_value);
+                conn.pst.setString(19, repeat_vl_date);
+                conn.pst.setString(20, vl_12_months_value);
+                conn.pst.setString(21, vl_12_months_date);
+                conn.pst.setString(22, last_visit_date);
+                conn.pst.setString(23, patient_outcome);
+                conn.pst.setString(24, yearmonth);
+                conn.pst.executeUpdate();
+            
+                System.out.println("query test n start______ : "+conn.pst);
+           conn.pst.executeUpdate();
+           }
+            else{
+               
+            }
+        }
+//***************************************************************************
+        i++;
+        }
+               
+     obj_det.put("added", added_records);
+     obj_det.put("skipped", skipped_records);
+     obj_det.put("skipped_details", all_error_details+"</tbody>");
+    }
+          else { //has errors while loading excel
+          obj_det.put("period_error", period_error);       
+            }
+         
+     obj_det.put("sheetname", "2b.Test & Start -Cohort Summary");
+     
+     return obj_det;
+    }
+    public JSONObject ARTCurrentLoss (XSSFSheet worksheet, dbConn conn) throws SQLException{
+    String all_error_details = "<thead class=\"thead-dark\"><tr><th>Row Number</th><th>County</th><th>Sub County</th><th>Health Facility</th><th>MFL Code</th><th>Patient CCC Number</th><th>Gender</th><th>Current Age</th><th>Date confirmed HIV Positive</th><th>Enrollment date</th><th>ART start date</th><th>Baseline WHO Stage</th><th>Baseline CD4 Count or Percent</th><th>Initial VL Result</th><th>Initial Vl Date</th><th>Repeat VL  result</th><th>Repeat VL date</th><th>VL result at 12 months</th><th>12 month Vl Date</th><th>Last visit date</th><th>Expected return date (TCA)</th><th>Patient Status</th><th>Date patient resumed Tx</th></tr></thead><tbody>";
+      String id="",year="",month="",county="",sub_county="",facility="",mfl_code="",ccc_no="",gender="",current_age="",date_confirmed_hiv_pos="",enrollment_date="",art_start_date="",baseline_who_stage="",baseline_cd4_cell_count_perc="",initial_vl="",initial_vl_date="",repeat_vl_value="",repeat_vl_date="",vl_12_months_value="",vl_12_months_date="",last_visit_date="",expected_return_date="",patient_status="",date_resumed_tx="",yearmonth="";
+           JSONObject obj_det = new JSONObject();
+        String error_details="",period_error = "Error While loading <b>3b. ART Current Net Loss-Var</b> Sheet: <br>";
+        boolean has_error=false;
+        Iterator rowIterator = worksheet.iterator();
+
+         XSSFRow row = worksheet.getRow(2);
+// **************************************Month***********************
+            XSSFCell cellmn = row.getCell((short) 4);
+            if(cellmn!=null){
+            switch (cellmn.getCellType()) {
+                   case 0:
+                       //numeric
+                       month =""+(int)cellmn.getNumericCellValue();
+                       break;
+                   case 1:
+                       //string
+                       month =cellmn.getStringCellValue();
+                       break;
+                   
+               }
+            }
+            if(month.equals("") || cellmn==null){
+               has_error=true;  
+               period_error+="Missing Month <br>";
+            }
+            
+// **************************************************************************           
+// **************************************Year***********************
+            XSSFCell cellyr = row.getCell((short) 11);
+            if(cellyr!=null){
+            switch (cellyr.getCellType()) {
+                   case 0:
+                       //numeric
+                       year =""+(int)cellyr.getNumericCellValue();
+                       break;
+                   case 1:
+                       //string
+                       year =cellyr.getStringCellValue();
+                       break;
+               }
+        }
+        if(year.equals("") || cellyr==null){
+               has_error=true;  
+               period_error+="Missing Year <br>";
+            }
+// ************************************************************************** 
+           
+            JSONObject period_data = CleanPeriod(year,month,conn);
+            
+            yearmonth = period_data.get("yearmonth").toString();
+            year = period_data.get("year").toString();
+            month = period_data.get("month").toString();
+            
+                    
+            
+            System.out.println("yearmonth : "+yearmonth+" year : "+year+" month :: "+month);
+//*******************************YearMonth************************
+    if(!has_error){
+        int i=5,y=0,skipped_records=0,added_records=0;
+        while(rowIterator.hasNext()){
+            error_details = "";
+            has_error=false;
+        
+            id=county=sub_county=facility=mfl_code=ccc_no=gender=current_age=date_confirmed_hiv_pos=enrollment_date=art_start_date=baseline_who_stage=baseline_cd4_cell_count_perc=initial_vl=initial_vl_date=repeat_vl_value=repeat_vl_date=vl_12_months_value=vl_12_months_date=last_visit_date=expected_return_date=patient_status=date_resumed_tx="";
+
+             XSSFRow rowi = worksheet.getRow(i);
+                if(rowi==null){
+                 break;
+                }
+
+// **************************************County***********************
+            XSSFCell cell0 = rowi.getCell((short) 0);
+            if(cell0!=null){
+            switch (cell0.getCellType()) {
+                   case 0:
+                       //numeric
+                       county =""+(int)cell0.getNumericCellValue();
+                       break;
+                   case 1:
+                       //string
+                       county =cell0.getStringCellValue();
+                       break;
+                  
+               }
+            }
+            error_details+="<td>"+county+"</td>";
+//*******************************End of county************************
+               
+// **************************************Sub county***********************
+            XSSFCell cell1 = rowi.getCell((short) 1);
+            if(cell1!=null){
+            switch (cell1.getCellType()) {
+                   case 0:
+                       //numeric
+                       sub_county =""+(int)cell1.getNumericCellValue();
+                       break;
+                   case 1:
+                       //string
+                       sub_county =cell1.getStringCellValue();
+                       break;
+                   
+               }
+            }
+            error_details+="<td>"+sub_county+"</td>";
+//*******************************End of sub-county************************
+
+// **************************************Facility Name***********************
+            XSSFCell cell2 = rowi.getCell((short) 2);
+            if(cell2!=null){
+            switch (cell2.getCellType()) {
+                   case 0:
+                       //numeric
+                       facility =""+(int)cell2.getNumericCellValue();
+                       break;
+                   case 1:
+                       //string
+                       facility =cell2.getStringCellValue();
+                       break;
+                   
+               }
+            }
+            error_details+="<td>"+facility+"</td>";
+//*******************************End of facility name************************;
+               
+// **************************************mflcode***********************
+            XSSFCell cell3 = rowi.getCell((short) 3);
+            if(cell3!=null){
+            switch (cell3.getCellType()) {
+                   case 0:
+                       //numeric
+                       mfl_code =""+(int)cell3.getNumericCellValue();
+                       break;
+                   case 1:
+                       //string
+                       mfl_code =cell3.getStringCellValue();
+                       break;
+               }
+            }
+            else{
+                has_error=true;
+            }
+            if(mfl_code.equals("")){
+               has_error=true;  
+            }
+            error_details+="<td>"+mfl_code+"</td>";
+//*******************************End of mflcode************************
+
+// **************************************CCC Number***********************
+        
+            XSSFCell cell4 = rowi.getCell((short) 4);
+            if(cell4!=null){
+            switch (cell4.getCellType()) {
+                   case 0:
+                       //numeric
+                       ccc_no =""+(int)cell4.getNumericCellValue();
+                       break;
+                   case 1:
+                       //string
+                       ccc_no =cell4.getStringCellValue();
+                       break;
+               }
+            }
+            else{
+                has_error=true;
+            }
+            if(ccc_no.equals("")){
+               has_error=true;  
+            }
+            error_details+="<td>"+ccc_no+"</td>";
+//*******************************End of ccc number************************
+               
+// **************************************gender***********************
+            XSSFCell cell5 = rowi.getCell((short) 5);
+            if(cell5!=null){
+            switch (cell5.getCellType()) {
+                   case 0:
+                       //numeric
+                       gender =""+(int)cell5.getNumericCellValue();
+                       break;
+                   case 1:
+                       //string
+                       gender =cell5.getStringCellValue();
+                       break;
+               }
+            }
+            error_details+="<td>"+gender+"</td>";
+//*******************************End of gender************************
+
+               
+// **************************************current age***********************
+            XSSFCell cell6 = rowi.getCell((short) 6);
+            if(cell6!=null){
+            switch (cell6.getCellType()) {
+                   case 0:
+                       //numeric
+                       current_age =""+(int)cell6.getNumericCellValue();
+                       break;
+                   case 1:
+                       //string
+                       current_age =cell6.getStringCellValue();
+                       break;
+                   
+               }
+            }
+            error_details+="<td>"+current_age+"</td>";
+//*******************************End of current age************************
+             
+// **************************************date confirmed HIV+***********************
+           if(rowi.getCell(7)!=null){
+if(rowi.getCell(7).getCellType()==0){
+          date_confirmed_hiv_pos =""+(int)rowi.getCell(7).getNumericCellValue();  
+        }
+        else{
+           if (rowi.getCell(7).getCellTypeEnum().equals(NUMERIC)) {
+            date_confirmed_hiv_pos = dateformat.format(rowi.getCell(7).getDateCellValue());
+        }
+        else{
+         date_confirmed_hiv_pos = rowi.getCell(7).getStringCellValue();
+        }
+    }
+           }
+           error_details+="<td>"+date_confirmed_hiv_pos+"</td>";
+//*******************************End of DATE CONFIRMED hiv pos************************
+               
+// **************************************enrollment date***********************
+if(rowi.getCell(8)!=null){
+          if(rowi.getCell(8).getCellType()==0){
+          enrollment_date =""+(int)rowi.getCell(8).getNumericCellValue();  
+        }
+        else{
+           if (rowi.getCell(8).getCellTypeEnum().equals(NUMERIC)) {
+            enrollment_date = dateformat.format(rowi.getCell(8).getDateCellValue());
+        }
+        else{
+         enrollment_date = rowi.getCell(8).getStringCellValue();
+        }
+    }
+ }
+error_details+="<td>"+enrollment_date+"</td>";
+//*******************************End of enrollment date************************
+
+
+// **************************************ART Start date***********************
+if(rowi.getCell(9)!=null){
+  if(rowi.getCell(9).getCellType()==0){
+  art_start_date =""+(int)rowi.getCell(9).getNumericCellValue();  
+    }
+    else{
+           if (rowi.getCell(9).getCellTypeEnum().equals(NUMERIC)) {
+            art_start_date = dateformat.format(rowi.getCell(9).getDateCellValue());
+        }
+        else{
+         art_start_date = rowi.getCell(9).getStringCellValue();
+        }
+    }
+}
+error_details+="<td>"+art_start_date+"</td>";
+//*******************************End of art start date************************
+
+// ************************************** baseline WHO stage ***********************
+            XSSFCell cell10 = rowi.getCell((short) 10);
+            if(cell10!=null){
+            switch (cell10.getCellType()) {
+                   case 0:
+                       //numeric
+                       baseline_who_stage =""+(int)cell10.getNumericCellValue();
+                       break;
+                   case 1:
+                       //string
+                       baseline_who_stage =cell10.getStringCellValue();
+                       break;
+                   
+               }
+            }
+            error_details+="<td>"+baseline_who_stage+"</td>";
+//*******************************End of baseline WHO stage************************
+
+
+// **************************************baseline cd4 cell count percentage***********************
+System.out.println("at pos : "+i+" mflcode : "+mfl_code);
+            XSSFCell cell11 = rowi.getCell((short) 11);
+            if(cell11!=null){
+            switch (cell11.getCellType()) {
+                   case 0:
+                       //numeric
+                       baseline_cd4_cell_count_perc =""+(int)cell11.getNumericCellValue();
+                       break;
+                   case 1:
+                       //string
+                       baseline_cd4_cell_count_perc =cell11.getStringCellValue();
+                       break;
+                   
+               }
+            }
+            error_details+="<td>"+baseline_cd4_cell_count_perc+"</td>";
+//*******************************End of baseline cd4 cell count percentage************************
+
+
+// **************************************initial vl***********************
+            XSSFCell cell12 = rowi.getCell((short) 12);
+            if(cell12!=null){
+            switch (cell12.getCellType()) {
+                   case 0:
+                       //numeric
+                       initial_vl =""+(int)cell12.getNumericCellValue();
+                       break;
+                   case 1:
+                       //string
+                       initial_vl =cell12.getStringCellValue();
+                       break;
+                  
+               }
+            }
+            error_details+="<td>"+initial_vl+"</td>";
+//*******************************End of initial vl************************
+
+
+// **************************************art start date***********************
+if(rowi.getCell(13)!=null){
+     if(rowi.getCell(13).getCellType()==0){
+  initial_vl_date =""+(int)rowi.getCell(13).getNumericCellValue();  
+    }
+    else{
+           if (rowi.getCell(13).getCellTypeEnum().equals(NUMERIC)) {
+            initial_vl_date = dateformat.format(rowi.getCell(13).getDateCellValue());
+        }
+        else{
+         initial_vl_date = rowi.getCell(13).getStringCellValue();
+        }
+    }
+}    
+error_details+="<td>"+initial_vl_date+"</td>";
+//*******************************End of art start date************************
+
+
+// **************************************repeat vl results***********************
+            XSSFCell cell14 = rowi.getCell((short) 14);
+            if(cell14!=null){
+            switch (cell14.getCellType()) {
+                   case 0:
+                       //numeric
+                       repeat_vl_value =""+(int)cell14.getNumericCellValue();
+                       break;
+                   case 1:
+                       //string
+                       repeat_vl_value =cell14.getStringCellValue();
+                       break;
+                   
+               }
+            }
+            error_details+="<td>"+repeat_vl_value+"</td>";
+//*******************************End of repeat vl results************************
+
+
+// **************************************repeat vl date***********************
+        if(rowi.getCell(15)!=null) {  
+          if(rowi.getCell(15).getCellType()==0){
+      repeat_vl_date =""+(int)rowi.getCell(15).getNumericCellValue();  
+        }
+        else{
+               if (rowi.getCell(15).getCellTypeEnum().equals(NUMERIC)) {
+                repeat_vl_date = dateformat.format(rowi.getCell(15).getDateCellValue());
+            }
+            else{
+             repeat_vl_date = rowi.getCell(15).getStringCellValue();
+            }
+    }
+        }
+        error_details+="<td>"+repeat_vl_date+"</td>";
+//*******************************End of repeat vl date************************
+
+// **************************************vl results at 12 months***********************
+            XSSFCell cell16 = rowi.getCell((short) 16);
+            if(cell16!=null){
+            switch (cell16.getCellType()) {
+                   case 0:
+                       //numeric
+                       vl_12_months_value =""+(int)cell16.getNumericCellValue();
+                       break;
+                   case 1:
+                       //string
+                       vl_12_months_value =cell16.getStringCellValue();
+                       break;
+                   
+               }
+            }
+            error_details+="<td>"+vl_12_months_value+"</td>";
+//*******************************End of vl results at 12 months************************
+
+
+// **************************************12 months vl date***********************
+        if(rowi.getCell(17)!=null){
+    if(rowi.getCell(17).getCellType()==0){
+           vl_12_months_date =""+(int)rowi.getCell(17).getNumericCellValue();  
+             }
+             else{
+                if (rowi.getCell(17).getCellTypeEnum().equals(NUMERIC)) {
+                 vl_12_months_date = dateformat.format(rowi.getCell(17).getDateCellValue());
+             }
+             else{
+              vl_12_months_date = rowi.getCell(17).getStringCellValue();
+             }
+     }
+        }
+        error_details+="<td>"+vl_12_months_date+"</td>";
+//*******************************End of 12 months vl date************************
+
+
+// **************************************last vl date***********************
+    if(rowi.getCell(18)!=null){
+                 if(rowi.getCell(18).getCellType()==0){
+            last_visit_date =""+(int)rowi.getCell(18).getNumericCellValue();  
+              }
+              else{
+                     if (rowi.getCell(18).getCellTypeEnum().equals(NUMERIC)) {
+                      last_visit_date = dateformat.format(rowi.getCell(18).getDateCellValue());
+                  }
+                  else{
+                   last_visit_date = rowi.getCell(18).getStringCellValue();
+                  }
+          }
+    }
+    error_details+="<td>"+last_visit_date+"</td>";
+//*******************************End of last vl date************************
+
+// **************************************expected return date***********************
+              if(rowi.getCell(19)!=null){
+                 if(rowi.getCell(19).getCellType()==0){
+            expected_return_date =""+(int)rowi.getCell(19).getNumericCellValue();  
+              }
+              else{
+                     if (rowi.getCell(19).getCellTypeEnum().equals(NUMERIC)) {
+                      expected_return_date = dateformat.format(rowi.getCell(19).getDateCellValue());
+                  }
+                  else{
+                   expected_return_date = rowi.getCell(19).getStringCellValue();
+                  }
+          }
+    }
+ error_details+="<td>"+expected_return_date+"</td>";             
+//*******************************End of expected return date************************
+
+// **************************************patient status***********************
+            XSSFCell cell20 = rowi.getCell((short) 20);
+            if(cell20!=null){
+            switch (cell20.getCellType()) {
+                   case 0:
+                       //numeric
+                       patient_status =""+(int)cell20.getNumericCellValue();
+                       break;
+                   case 1:
+                       //string
+                       patient_status =cell20.getStringCellValue();
+                       break;
+                   
+               }
+            }
+            error_details+="<td>"+patient_status+"</td>";
+//*******************************End of patient status************************
+
+// **************************************date patient resument tx***********************
+              if(rowi.getCell(21)!=null){
+                 if(rowi.getCell(21).getCellType()==0){
+            date_resumed_tx =""+(int)rowi.getCell(21).getNumericCellValue();  
+              }
+              else{
+                     if (rowi.getCell(21).getCellTypeEnum().equals(NUMERIC)) {
+                      date_resumed_tx = dateformat.format(rowi.getCell(21).getDateCellValue());
+                  }
+                  else{
+                   date_resumed_tx = rowi.getCell(21).getStringCellValue();
+                  }
+          }
+    }
+              error_details+="<td>"+date_resumed_tx+"</td>";
+//*******************************End of date patient resument tx************************
+
+//     generate id
+
+            id = mfl_code+"_"+yearmonth+"_"+ccc_no;
+
+      //       END OF READING VALUES
+if(has_error){
+  all_error_details+="<tr><td>"+i+"</td>"+error_details+"</tr>"; 
+  skipped_records++;
+}
+else{
+    added_records++;
+            //GET CORRECT COUNTY, SUBCOUNTY DATA FOR THIS FACILITY
+            JSONObject obj_facil = GetFacilityDetails(conn, mfl_code);
+            
+            if(obj_facil.containsKey("county")){
+              county = obj_facil.get("county").toString();
+              sub_county = obj_facil.get("sub_county").toString();
+              facility = obj_facil.get("facility").toString();
+
+                String query = "REPLACE INTO art_current_net_loss SET id=?,year=?,month=?,county=?,sub_county=?,facility=?,mfl_code=?,ccc_no=?,gender=?,current_age=?,date_confirmed_hiv_pos=?,enrollment_date=?,art_start_date=?,baseline_who_stage=?,baseline_cd4_cell_count_perc=?,initial_vl=?,initial_vl_date=?,repeat_vl_value=?,repeat_vl_date=?,vl_12_months_value=?,vl_12_months_date=?,last_visit_date=?,yearmonth=?,expected_return_date=?,patient_status=?,date_resumed_tx=?";
+                conn.pst = conn.conn.prepareStatement(query);
+                conn.pst.setString(1, id);
+                conn.pst.setString(2, year);
+                conn.pst.setString(3, month);
+                conn.pst.setString(4, county);
+                conn.pst.setString(5, sub_county);
+                conn.pst.setString(6, facility);
+                conn.pst.setString(7, mfl_code);
+                conn.pst.setString(8, ccc_no);
+                conn.pst.setString(9, gender);
+                conn.pst.setString(10, current_age);
+                conn.pst.setString(11, date_confirmed_hiv_pos);
+                conn.pst.setString(12, enrollment_date);
+                conn.pst.setString(13, art_start_date);
+                conn.pst.setString(14, baseline_who_stage);
+                conn.pst.setString(15, baseline_cd4_cell_count_perc);
+                conn.pst.setString(16, initial_vl);
+                conn.pst.setString(17, initial_vl_date);
+                conn.pst.setString(18, repeat_vl_value);
+                conn.pst.setString(19, repeat_vl_date);
+                conn.pst.setString(20, vl_12_months_value);
+                conn.pst.setString(21, vl_12_months_date);
+                conn.pst.setString(22, last_visit_date);
+                conn.pst.setString(23, yearmonth);
+                conn.pst.setString(24, expected_return_date);
+                conn.pst.setString(25, patient_status);
+                conn.pst.setString(26, date_resumed_tx);
+                conn.pst.executeUpdate();
+            
+                System.out.println("query ART current net loss______ : "+conn.pst);
+                conn.pst.executeUpdate();
+              
             }
             else{
                
             }
-            
+        }
 //***************************************************************************
         i++;
         }
-        
-      
-      return num;
+               
+     obj_det.put("added", added_records);
+     obj_det.put("skipped", skipped_records);
+     obj_det.put("skipped_details", all_error_details+"</tbody>");
     }
-    public int Accounting4LinkageSummaryXLS (HSSFSheet worksheet, dbConn conn) throws SQLException{
-        String id="",period_details="",year="",month="",county="",sub_county="",facility="",mfl_code="",date_confirmed_hiv_pos="",gender="",current_age="",documented_linkage_register="",ccc_no="",enrollment_date="",referred="",enrolled_to_other_site="",enrolled_from_other_site="",art_start_date="",started_art_in_this_facility="",started_art_in_other_facility="",patient_status="",declined_reason="",reported_cause_of_death="",yearmonth="";
+          else { //has errors while loading excel
+          obj_det.put("period_error", period_error);       
+            }
 
-      int num=0;
+     obj_det.put("sheetname", "3b. ART Current Net Loss-Var");
+        
+      return obj_det;
+    }
+    
+    public JSONObject Accounting4LinkageSummary (HSSFSheet worksheet, dbConn conn) throws SQLException{
+        String all_error_details = "<thead class=\"thead-dark\"><tr><th>Row Number</th><th>County</th><th>Sub-County</th><th>Health Facility</th><th>MFL Code</th><th>Date confirmed HIV positive</th><th>Gender</th><th>Current Age</th><th>Documented in linkage register</th><th>Patient CCC Number</th><th>Enrolment Date</th><th>Referred</th><th>Enrolled to other site</th><th>Enrolled from other site</th><th>ART start date</th><th>Started ART in this facility</th><th>Started in other facility</th><th>Patient Status</th><th>If declined, indicate reason</th><th>If dead, indicate reported  cause of death</th></tr></thead><tbody>";
+        String id="",period_details="",year="",month="",county="",sub_county="",facility="",mfl_code="",date_confirmed_hiv_pos="",gender="",current_age="",documented_linkage_register="",ccc_no="",enrollment_date="",referred="",enrolled_to_other_site="",enrolled_from_other_site="",art_start_date="",started_art_in_this_facility="",started_art_in_other_facility="",patient_status="",declined_reason="",reported_cause_of_death="",yearmonth="";
+        JSONObject obj_det = new JSONObject();
+         String error_details="",period_error = "Error While loading <b>1b. Accounting for Linkage</b> Sheet: <br>";
+        boolean has_error=false;
+        
         Iterator rowIterator = worksheet.iterator();
 
          HSSFRow row = worksheet.getRow(2);
@@ -941,6 +2116,10 @@ else{
                        break;
                    
                }
+            if(month.equals("") || cellmn==null){
+               has_error=true;  
+               period_error+="Missing Month <br>";
+            }
 // **************************************************************************           
 // **************************************Year***********************
             HSSFCell cellyr = row.getCell((short) 12);
@@ -954,6 +2133,10 @@ else{
                        year =cellyr.getStringCellValue();
                        break;
                }
+            if(year.equals("") || cellyr==null){
+               has_error=true;  
+               period_error+="Missing Year <br>";
+            }
 // **************************************************************************           
             System.out.println("perid details : "+period_details);
             
@@ -968,9 +2151,12 @@ else{
             System.out.println("perid details : yearmonth : "+yearmonth+" year : "+year+" month :: "+month);
 //*******************************YearMonth************************
 
-        
-        int i=1,y=0;
+        if(!has_error){
+        int i=5,y=0,skipped_records=0,added_records=0;
         while(rowIterator.hasNext()){
+            error_details = "";
+            has_error=false;
+        
             id=period_details=county=sub_county=facility=mfl_code=date_confirmed_hiv_pos=gender=current_age=documented_linkage_register=ccc_no=enrollment_date=referred=enrolled_to_other_site=enrolled_from_other_site=art_start_date=started_art_in_this_facility=started_art_in_other_facility=patient_status=declined_reason=reported_cause_of_death="";
 
              HSSFRow rowi = worksheet.getRow(i);
@@ -980,6 +2166,7 @@ else{
 
 // **************************************County***********************
             HSSFCell cell0 = rowi.getCell((short) 0);
+              if(cell0!=null){
             switch (cell0.getCellType()) {
                    case 0:
                        //numeric
@@ -991,10 +2178,13 @@ else{
                        break;
                   
                }
+        }
+            error_details+="<td>"+county+"</td>";
 //*******************************End of county************************
                
 // **************************************Sub county***********************
             HSSFCell cell1 = rowi.getCell((short) 1);
+              if(cell1!=null){
             switch (cell1.getCellType()) {
                    case 0:
                        //numeric
@@ -1006,10 +2196,13 @@ else{
                        break;
                    
                }
+        }
+            error_details+="<td>"+sub_county+"</td>";
 //*******************************End of sub-county************************
 
 // **************************************Facility Name***********************
             HSSFCell cell2 = rowi.getCell((short) 2);
+              if(cell2!=null){
             switch (cell2.getCellType()) {
                    case 0:
                        //numeric
@@ -1021,10 +2214,13 @@ else{
                        break;
                    
                }
+        }
+            error_details+="<td>"+facility+"</td>";
 //*******************************End of facility name************************;
                
 // **************************************mflcode***********************
             HSSFCell cell3 = rowi.getCell((short) 3);
+              if(cell3!=null){
             switch (cell3.getCellType()) {
                    case 0:
                        //numeric
@@ -1035,24 +2231,36 @@ else{
                        mfl_code =cell3.getStringCellValue();
                        break;
                }
+            }
+             else{
+                has_error=true;
+            }
+            if(mfl_code.equals("")){
+               has_error=true;  
+            }
+            error_details+="<td>"+ccc_no+"</td>";
 //*******************************End of mflcode************************
 
 // **************************************date confirmed HIV pos***********************
-if(rowi.getCell(4).getCellType()==0){
-  date_confirmed_hiv_pos =""+(int)rowi.getCell(4).getNumericCellValue();  
-}
-else{
+        if(rowi.getCell(4)!=null){
+        if(rowi.getCell(4).getCellType()==0){
+          date_confirmed_hiv_pos =""+(int)rowi.getCell(4).getNumericCellValue();  
+        }
+        else{
            if (rowi.getCell(4).getCellTypeEnum().equals(NUMERIC)) {
             date_confirmed_hiv_pos = dateformat.format(rowi.getCell(4).getDateCellValue());
         }
         else{
          date_confirmed_hiv_pos = rowi.getCell(4).getStringCellValue();
         }
-}
+    }
+        }
+            error_details+="<td>"+date_confirmed_hiv_pos+"</td>";
 //*******************************End of date confirmed HIV pos************************
                
 // **************************************gender***********************
             HSSFCell cell5 = rowi.getCell((short) 5);
+              if(cell5!=null){
             switch (cell5.getCellType()) {
                    case 0:
                        //numeric
@@ -1063,11 +2271,14 @@ else{
                        gender =cell5.getStringCellValue();
                        break;
                }
+              }
+            error_details+="<td>"+gender+"</td>";
 //*******************************End of gender************************
 
                
 // **************************************current age***********************
             HSSFCell cell6 = rowi.getCell((short) 6);
+              if(cell6!=null){
             switch (cell6.getCellType()) {
                    case 0:
                        //numeric
@@ -1079,10 +2290,13 @@ else{
                        break;
                    
                }
+              }
+            error_details+="<td>"+current_age+"</td>";
 //*******************************End of current age************************
              
 // **************************************documented in linked register***********************
             HSSFCell cell7 = rowi.getCell((short) 7);
+            if(cell7!=null){
             switch (cell7.getCellType()) {
                    case 0:
                        //numeric
@@ -1094,10 +2308,13 @@ else{
                        break;
                   
                }
+            }
+            error_details+="<td>"+documented_linkage_register+"</td>";
 //*******************************End of documented in linked register************************
                
 // **************************************patient ccc number***********************
             HSSFCell cell8 = rowi.getCell((short) 8);
+            if(cell8!=null){
             switch (cell8.getCellType()) {
                    case 0:
                        //numeric
@@ -1109,10 +2326,19 @@ else{
                        break;
                   
                }
+            }
+             else{
+                has_error=true;
+            }
+            if(ccc_no.equals("")){
+               has_error=true;  
+            }
+            error_details+="<td>"+ccc_no+"</td>";
 //*******************************End of patient ccc number************************
 
 
 // **************************************enrollment date***********************
+    if(rowi.getCell(9)!=null){
   if(rowi.getCell(9).getCellType()==0){
   enrollment_date =""+(int)rowi.getCell(9).getNumericCellValue();  
     }
@@ -1124,11 +2350,14 @@ else{
          enrollment_date = rowi.getCell(9).getStringCellValue();
         }
 }
+        }
+            error_details+="<td>"+enrollment_date+"</td>";
 //*******************************End of enrollment date************************
 
 
 // **************************************referred***********************
             HSSFCell cell10 = rowi.getCell((short) 10);
+            if(cell10!=null){
             switch (cell10.getCellType()) {
                    case 0:
                        //numeric
@@ -1139,12 +2368,14 @@ else{
                        referred =cell10.getStringCellValue();
                        break;
                    
-               }
+               } }
+            error_details+="<td>"+referred+"</td>";
 //*******************************End of referred************************
 
 
 // **************************************linked to other sites***********************
             HSSFCell cell11 = rowi.getCell((short) 11);
+            if(cell11!=null){
             switch (cell11.getCellType()) {
                    case 0:
                        //numeric
@@ -1155,12 +2386,14 @@ else{
                        enrolled_to_other_site =cell11.getStringCellValue();
                        break;
                    
-               }
+               } }
+            error_details+="<td>"+enrolled_to_other_site+"</td>";
 //*******************************End of linked to other site************************
 
 
 // **************************************linked from other sites***********************
             HSSFCell cell12 = rowi.getCell((short) 12);
+            if(cell12!=null){
             switch (cell12.getCellType()) {
                    case 0:
                        //numeric
@@ -1171,11 +2404,12 @@ else{
                        enrolled_from_other_site =cell12.getStringCellValue();
                        break;
                   
-               }
+               }}
+            error_details+="<td>"+enrolled_from_other_site+"</td>";
 //*******************************End of linked from other sites************************
 
-
 // **************************************art start date***********************
+    if(rowi.getCell(13)!=null){
      if(rowi.getCell(13).getCellType()==0){
   art_start_date =""+(int)rowi.getCell(13).getNumericCellValue();  
     }
@@ -1187,12 +2421,14 @@ else{
          art_start_date = rowi.getCell(13).getStringCellValue();
         }
 }
-              
+    }
+            error_details+="<td>"+art_start_date+"</td>";          
 //*******************************End of art start date************************
 
 
 // **************************************started art in this facility***********************
             HSSFCell cell14 = rowi.getCell((short) 14);
+        if(cell14!=null){
             switch (cell14.getCellType()) {
                    case 0:
                        //numeric
@@ -1203,12 +2439,14 @@ else{
                        started_art_in_this_facility =cell14.getStringCellValue();
                        break;
                    
-               }
+               }}
+            error_details+="<td>"+started_art_in_this_facility+"</td>";   
 //*******************************End of started art in this facility************************
 
 
 // **************************************started art in other facility***********************
             HSSFCell cell15 = rowi.getCell((short) 15);
+            if(cell15!=null){
             switch (cell15.getCellType()) {
                    case 0:
                        //numeric
@@ -1219,12 +2457,14 @@ else{
                        started_art_in_other_facility =cell15.getStringCellValue();
                        break;
                    
-               }
+               }}
+            error_details+="<td>"+started_art_in_other_facility+"</td>"; 
 //*******************************End of started art in other facility************************
 
 
 // **************************************patient status***********************
             HSSFCell cell16 = rowi.getCell((short) 16);
+            if(cell16!=null){
             switch (cell16.getCellType()) {
                    case 0:
                        //numeric
@@ -1235,12 +2475,14 @@ else{
                        patient_status =cell16.getStringCellValue();
                        break;
                    
-               }
+               }}
+            error_details+="<td>"+patient_status+"</td>"; 
 //*******************************End of patient status************************
 
 
 // **************************************if declined indicate reason***********************
             HSSFCell cell17 = rowi.getCell((short) 17);
+            if(cell17!=null){
             switch (cell17.getCellType()) {
                    case 0:
                        //numeric
@@ -1251,7 +2493,8 @@ else{
                        declined_reason =cell17.getStringCellValue();
                        break;
                    
-               }
+               }}
+            error_details+="<td>"+declined_reason+"</td>"; 
 //*******************************End of if declined indicate reason************************
 
 
@@ -1270,6 +2513,7 @@ else{
                    
                }
             }
+            error_details+="<td>"+reported_cause_of_death+"</td>"; 
 //*******************************End of reported cause of death************************
 
 //     generate id
@@ -1277,7 +2521,12 @@ else{
             id = mfl_code+"_"+yearmonth+"_"+ccc_no;
 
       //       END OF READING VALUES
-
+    if(has_error){
+      all_error_details+="<tr><td>"+i+"</td>"+error_details+"</tr>"; 
+      skipped_records++;
+    }
+    else{
+        added_records++;
             //GET CORRECT COUNTY, SUBCOUNTY DATA FOR THIS FACILITY
             JSONObject obj_facil = GetFacilityDetails(conn, mfl_code);
             
@@ -1286,7 +2535,7 @@ else{
               sub_county = obj_facil.get("sub_county").toString();
               facility = obj_facil.get("facility").toString();
 
-                String query = "REPLACE INTO accounting_for_linkage SET id=?,year=?,month=?,county=?,sub_county=?,facility=?,mfl_code=?,date_confirmed_hiv_pos=?,gender=?,current_age=?,documented_linkage_register=?,ccc_no=?,enrollment_date=?,referred=?,enrolled_to_other_site=?,enrolled_from_other_site=?,art_start_date=?,started_art_in_this_facility=?,started_art_in_other_facility=?,patient_status=?,declined_reason=?,reported_cause_of_death=?,yearmonth=?";
+               String query = "REPLACE INTO accounting_for_linkage SET id=?,year=?,month=?,county=?,sub_county=?,facility=?,mfl_code=?,date_confirmed_hiv_pos=?,gender=?,current_age=?,documented_linkage_register=?,ccc_no=?,enrollment_date=?,referred=?,enrolled_to_other_site=?,enrolled_from_other_site=?,art_start_date=?,started_art_in_this_facility=?,started_art_in_other_facility=?,patient_status=?,declined_reason=?,reported_cause_of_death=?,yearmonth=?";
                 conn.pst = conn.conn.prepareStatement(query);
                 conn.pst.setString(1, id);
                 conn.pst.setString(2, year);
@@ -1314,492 +2563,37 @@ else{
                 conn.pst.executeUpdate();
             
                 System.out.println("query : "+conn.pst);
-            num += conn.pst.executeUpdate();
-              if(num>0){
-                 
-              }  
-              else{
-                
-              }
-            }
-            else{
-               
-            }
-            
-//***************************************************************************
-        i++;
-        }
-        
-      
-      return num;
-    }
- 
-    public int TestStartSummaryXLSX (XSSFSheet worksheet, dbConn conn) throws SQLException{
-      String id="",year="",month="",county="",sub_county="",facility="",mfl_code="",ccc_no="",gender="",current_age="",date_confirmed_hiv_pos="",enrollment_date="",art_start_date="",baseline_who_stage="",baseline_cd4_cell_count_perc="",initial_vl="",initial_vl_date="",repeat_vl_value="",repeat_vl_date="",vl_12_months_value="",vl_12_months_date="",last_visit_date="",patient_outcome="",yearmonth="";
-      int num=0;
-        Iterator rowIterator = worksheet.iterator();
-
-         XSSFRow row = worksheet.getRow(2);
-// **************************************Month***********************
-            XSSFCell cellmn = row.getCell((short) 4);
-            if(cellmn!=null){
-            switch (cellmn.getCellType()) {
-                   case 0:
-                       //numeric
-                       month =""+(int)cellmn.getNumericCellValue();
-                       break;
-                   case 1:
-                       //string
-                       month =cellmn.getStringCellValue();
-                       break;
-                   
-               }
-            }
-// **************************************************************************           
-// **************************************Year***********************
-            XSSFCell cellyr = row.getCell((short) 12);
-            if(cellyr!=null){
-            switch (cellyr.getCellType()) {
-                   case 0:
-                       //numeric
-                       year =""+(int)cellyr.getNumericCellValue();
-                       break;
-                   case 1:
-                       //string
-                       year =cellyr.getStringCellValue();
-                       break;
-               }
-        }
-// ************************************************************************** 
-            
-            JSONObject period_data = CleanPeriod(year,month,conn);
-            
-            yearmonth = period_data.get("yearmonth").toString();
-            year = period_data.get("year").toString();
-            month = period_data.get("month").toString();
-            
-                    
-            
-            System.out.println("yearmonth : "+yearmonth+" year : "+year+" month :: "+month);
-//*******************************YearMonth************************
-
-        
-        int i=5,y=0;
-        while(rowIterator.hasNext()){
-            id=county=sub_county=facility=mfl_code=ccc_no=gender=current_age=date_confirmed_hiv_pos=enrollment_date=art_start_date=baseline_who_stage=baseline_cd4_cell_count_perc=initial_vl=initial_vl_date=repeat_vl_value=repeat_vl_date=vl_12_months_value=vl_12_months_date=last_visit_date=patient_outcome="";
-      
-             XSSFRow rowi = worksheet.getRow(i);
-                if(rowi==null){
-                 break;
-                }
-
-// **************************************County***********************
-            XSSFCell cell0 = rowi.getCell((short) 0);
-            if(cell0!=null){
-            switch (cell0.getCellType()) {
-                   case 0:
-                       //numeric
-                       county =""+(int)cell0.getNumericCellValue();
-                       break;
-                   case 1:
-                       //string
-                       county =cell0.getStringCellValue();
-                       break;
-                  
-               }
-            }
-//*******************************End of county************************
-               
-// **************************************Sub county***********************
-            XSSFCell cell1 = rowi.getCell((short) 1);
-            if(cell1!=null){
-            switch (cell1.getCellType()) {
-                   case 0:
-                       //numeric
-                       sub_county =""+(int)cell1.getNumericCellValue();
-                       break;
-                   case 1:
-                       //string
-                       sub_county =cell1.getStringCellValue();
-                       break;
-                   
-               }
-            }
-//*******************************End of sub-county************************
-
-// **************************************Facility Name***********************
-            XSSFCell cell2 = rowi.getCell((short) 2);
-            if(cell2!=null){
-            switch (cell2.getCellType()) {
-                   case 0:
-                       //numeric
-                       facility =""+(int)cell2.getNumericCellValue();
-                       break;
-                   case 1:
-                       //string
-                       facility =cell2.getStringCellValue();
-                       break;
-                   
-               }
-            }
-//*******************************End of facility name************************;
-               
-// **************************************mflcode***********************
-            XSSFCell cell3 = rowi.getCell((short) 3);
-            if(cell3!=null){
-            switch (cell3.getCellType()) {
-                   case 0:
-                       //numeric
-                       mfl_code =""+(int)cell3.getNumericCellValue();
-                       break;
-                   case 1:
-                       //string
-                       mfl_code =cell3.getStringCellValue();
-                       break;
-               }
-            }
-//*******************************End of mflcode************************
-
-// **************************************CCC Number***********************
-        
-            XSSFCell cell4 = rowi.getCell((short) 4);
-            if(cell4!=null){
-            switch (cell4.getCellType()) {
-                   case 0:
-                       //numeric
-                       ccc_no =""+(int)cell4.getNumericCellValue();
-                       break;
-                   case 1:
-                       //string
-                       ccc_no =cell4.getStringCellValue();
-                       break;
-               }
-            }
-//*******************************End of ccc number************************
-               
-// **************************************gender***********************
-            XSSFCell cell5 = rowi.getCell((short) 5);
-            if(cell5!=null){
-            switch (cell5.getCellType()) {
-                   case 0:
-                       //numeric
-                       gender =""+(int)cell5.getNumericCellValue();
-                       break;
-                   case 1:
-                       //string
-                       gender =cell5.getStringCellValue();
-                       break;
-               }
-            }
-//*******************************End of gender************************
-
-               
-// **************************************current age***********************
-            XSSFCell cell6 = rowi.getCell((short) 6);
-            if(cell6!=null){
-            switch (cell6.getCellType()) {
-                   case 0:
-                       //numeric
-                       current_age =""+(int)cell6.getNumericCellValue();
-                       break;
-                   case 1:
-                       //string
-                       current_age =cell6.getStringCellValue();
-                       break;
-                   
-               }
-            }
-//*******************************End of current age************************
-             
-// **************************************date confirmed HIV+***********************
-           if(rowi.getCell(7)!=null){
-if(rowi.getCell(7).getCellType()==0){
-          date_confirmed_hiv_pos =""+(int)rowi.getCell(7).getNumericCellValue();  
-        }
-        else{
-           if (rowi.getCell(7).getCellTypeEnum().equals(NUMERIC)) {
-            date_confirmed_hiv_pos = dateformat.format(rowi.getCell(7).getDateCellValue());
-        }
-        else{
-         date_confirmed_hiv_pos = rowi.getCell(7).getStringCellValue();
-        }
-    }
+            conn.pst.executeUpdate();
            }
-//*******************************End of DATE CONFIRMED hiv pos************************
-               
-// **************************************enrollment date***********************
-if(rowi.getCell(8)!=null){
-          if(rowi.getCell(8).getCellType()==0){
-          enrollment_date =""+(int)rowi.getCell(8).getNumericCellValue();  
-        }
-        else{
-           if (rowi.getCell(8).getCellTypeEnum().equals(NUMERIC)) {
-            enrollment_date = dateformat.format(rowi.getCell(8).getDateCellValue());
-        }
-        else{
-         enrollment_date = rowi.getCell(8).getStringCellValue();
-        }
-    }
- }
-//*******************************End of enrollment date************************
-
-
-// **************************************ART Start date***********************
-if(rowi.getCell(9)!=null){
-  if(rowi.getCell(9).getCellType()==0){
-  art_start_date =""+(int)rowi.getCell(9).getNumericCellValue();  
-    }
-    else{
-           if (rowi.getCell(9).getCellTypeEnum().equals(NUMERIC)) {
-            art_start_date = dateformat.format(rowi.getCell(9).getDateCellValue());
-        }
-        else{
-         art_start_date = rowi.getCell(9).getStringCellValue();
-        }
-    }
-}
-//*******************************End of art start date************************
-
-// ************************************** baseline WHO stage ***********************
-            XSSFCell cell10 = rowi.getCell((short) 10);
-            if(cell10!=null){
-            switch (cell10.getCellType()) {
-                   case 0:
-                       //numeric
-                       baseline_who_stage =""+(int)cell10.getNumericCellValue();
-                       break;
-                   case 1:
-                       //string
-                       baseline_who_stage =cell10.getStringCellValue();
-                       break;
-                   
-               }
-            }
-//*******************************End of baseline WHO stage************************
-
-
-// **************************************baseline cd4 cell count percentage***********************
-System.out.println("at pos : "+i+" mflcode : "+mfl_code);
-            XSSFCell cell11 = rowi.getCell((short) 11);
-            if(cell11!=null){
-            switch (cell11.getCellType()) {
-                   case 0:
-                       //numeric
-                       baseline_cd4_cell_count_perc =""+(int)cell11.getNumericCellValue();
-                       break;
-                   case 1:
-                       //string
-                       baseline_cd4_cell_count_perc =cell11.getStringCellValue();
-                       break;
-                   
-               }
-            }
-//*******************************End of baseline cd4 cell count percentage************************
-
-
-// **************************************initial vl***********************
-            XSSFCell cell12 = rowi.getCell((short) 12);
-            if(cell12!=null){
-            switch (cell12.getCellType()) {
-                   case 0:
-                       //numeric
-                       initial_vl =""+(int)cell12.getNumericCellValue();
-                       break;
-                   case 1:
-                       //string
-                       initial_vl =cell12.getStringCellValue();
-                       break;
-                  
-               }
-            }
-//*******************************End of initial vl************************
-
-
-// **************************************art start date***********************
-if(rowi.getCell(13)!=null){
-     if(rowi.getCell(13).getCellType()==0){
-  initial_vl_date =""+(int)rowi.getCell(13).getNumericCellValue();  
-    }
-    else{
-           if (rowi.getCell(13).getCellTypeEnum().equals(NUMERIC)) {
-            initial_vl_date = dateformat.format(rowi.getCell(13).getDateCellValue());
-        }
-        else{
-         initial_vl_date = rowi.getCell(13).getStringCellValue();
-        }
-    }
-}            
-//*******************************End of art start date************************
-
-
-// **************************************repeat vl results***********************
-            XSSFCell cell14 = rowi.getCell((short) 14);
-            if(cell14!=null){
-            switch (cell14.getCellType()) {
-                   case 0:
-                       //numeric
-                       repeat_vl_value =""+(int)cell14.getNumericCellValue();
-                       break;
-                   case 1:
-                       //string
-                       repeat_vl_value =cell14.getStringCellValue();
-                       break;
-                   
-               }
-            }
-//*******************************End of repeat vl results************************
-
-
-// **************************************repeat vl date***********************
-        if(rowi.getCell(15)!=null) {  
-          if(rowi.getCell(15).getCellType()==0){
-      repeat_vl_date =""+(int)rowi.getCell(15).getNumericCellValue();  
-        }
-        else{
-               if (rowi.getCell(15).getCellTypeEnum().equals(NUMERIC)) {
-                repeat_vl_date = dateformat.format(rowi.getCell(15).getDateCellValue());
-            }
-            else{
-             repeat_vl_date = rowi.getCell(15).getStringCellValue();
-            }
-    }
-        }
-//*******************************End of repeat vl date************************
-
-// **************************************vl results at 12 months***********************
-            XSSFCell cell16 = rowi.getCell((short) 16);
-            if(cell16!=null){
-            switch (cell16.getCellType()) {
-                   case 0:
-                       //numeric
-                       vl_12_months_value =""+(int)cell16.getNumericCellValue();
-                       break;
-                   case 1:
-                       //string
-                       vl_12_months_value =cell16.getStringCellValue();
-                       break;
-                   
-               }
-            }
-//*******************************End of vl results at 12 months************************
-
-
-// **************************************12 months vl date***********************
-        if(rowi.getCell(17)!=null){
-    if(rowi.getCell(17).getCellType()==0){
-           vl_12_months_date =""+(int)rowi.getCell(17).getNumericCellValue();  
-             }
-             else{
-                if (rowi.getCell(17).getCellTypeEnum().equals(NUMERIC)) {
-                 vl_12_months_date = dateformat.format(rowi.getCell(17).getDateCellValue());
-             }
-             else{
-              vl_12_months_date = rowi.getCell(17).getStringCellValue();
-             }
-     }
-        }
-//*******************************End of 12 months vl date************************
-
-
-// **************************************last vl date***********************
-    if(rowi.getCell(18)!=null){
-                 if(rowi.getCell(18).getCellType()==0){
-            last_visit_date =""+(int)rowi.getCell(18).getNumericCellValue();  
-              }
-              else{
-                     if (rowi.getCell(18).getCellTypeEnum().equals(NUMERIC)) {
-                      last_visit_date = dateformat.format(rowi.getCell(18).getDateCellValue());
-                  }
-                  else{
-                   last_visit_date = rowi.getCell(18).getStringCellValue();
-                  }
-          }
-    }
-//*******************************End of last vl date************************
-
-// **************************************patient outcomes***********************
-            XSSFCell cell19 = rowi.getCell((short) 19);
-            if(cell19!=null){
-            switch (cell19.getCellType()) {
-                   case 0:
-                       //numeric
-                       patient_outcome =""+(int)cell19.getNumericCellValue();
-                       break;
-                   case 1:
-                       //string
-                       patient_outcome =cell19.getStringCellValue();
-                       break;
-                   
-               }
-            }
-//*******************************End of patient outcomes************************
-
-
-//     generate id
-
-            id = mfl_code+"_"+yearmonth+"_"+ccc_no;
-
-      //       END OF READING VALUES
-
-            //GET CORRECT COUNTY, SUBCOUNTY DATA FOR THIS FACILITY
-            JSONObject obj_facil = GetFacilityDetails(conn, mfl_code);
-            
-            if(obj_facil.containsKey("county")){
-              county = obj_facil.get("county").toString();
-              sub_county = obj_facil.get("sub_county").toString();
-              facility = obj_facil.get("facility").toString();
-
-                String query = "REPLACE INTO test_start_summary SET id=?,year=?,month=?,county=?,sub_county=?,facility=?,mfl_code=?,ccc_no=?,gender=?,current_age=?,date_confirmed_hiv_pos=?,enrollment_date=?,art_start_date=?,baseline_who_stage=?,baseline_cd4_cell_count_perc=?,initial_vl=?,initial_vl_date=?,repeat_vl_value=?,repeat_vl_date=?,vl_12_months_value=?,vl_12_months_date=?,last_visit_date=?,patient_outcome=?,yearmonth=?";
-                conn.pst = conn.conn.prepareStatement(query);
-                conn.pst.setString(1, id);
-                conn.pst.setString(2, year);
-                conn.pst.setString(3, month);
-                conn.pst.setString(4, county);
-                conn.pst.setString(5, sub_county);
-                conn.pst.setString(6, facility);
-                conn.pst.setString(7, mfl_code);
-                conn.pst.setString(8, ccc_no);
-                conn.pst.setString(9, gender);
-                conn.pst.setString(10, current_age);
-                conn.pst.setString(11, date_confirmed_hiv_pos);
-                conn.pst.setString(12, enrollment_date);
-                conn.pst.setString(13, art_start_date);
-                conn.pst.setString(14, baseline_who_stage);
-                conn.pst.setString(15, baseline_cd4_cell_count_perc);
-                conn.pst.setString(16, initial_vl);
-                conn.pst.setString(17, initial_vl_date);
-                conn.pst.setString(18, repeat_vl_value);
-                conn.pst.setString(19, repeat_vl_date);
-                conn.pst.setString(20, vl_12_months_value);
-                conn.pst.setString(21, vl_12_months_date);
-                conn.pst.setString(22, last_visit_date);
-                conn.pst.setString(23, patient_outcome);
-                conn.pst.setString(24, yearmonth);
-                conn.pst.executeUpdate();
-            
-                System.out.println("query test n start______ : "+conn.pst);
-            num += conn.pst.executeUpdate();
-              if(num>0){
-                 
-              }  
-              else{
-                
-              }
-            }
             else{
                
             }
-            
+        }
 //***************************************************************************
         i++;
         }
+               
+     obj_det.put("added", added_records);
+     obj_det.put("skipped", skipped_records);
+     obj_det.put("skipped_details", all_error_details+"</tbody>");
+    }
+          else { //has errors while loading excel
+          obj_det.put("period_error", period_error);       
+            }
+
+     obj_det.put("sheetname", "1b. Accounting for Linkage");
+     
         
       
-      return num;
+      return obj_det;
     }
-    public int TestStartSummaryXLS (HSSFSheet worksheet, dbConn conn) throws SQLException{
+    public JSONObject TestStartSummary (HSSFSheet worksheet, dbConn conn) throws SQLException{
+        String all_error_details="<thead class=\"thead-dark\"><tr><th>Row Number</th><th>County</th><th>Subcounty</th><th>Health Facility</th><th>MFL Code</th><th>Patient CCC Number</th><th>Gender</th><th>Current Age</th><th>Date confirmed HIV Positive</th><th>Enrollment date</th><th>ART start date</th><th>Baseline WHO Stage</th><th>Baseline CD4 Count or Percent</th><th>Initial VL Result</th><th>Initial Vl Date</th><th>Repeat VL  result</th><th>Repeat VL date</th><th>VL result at 12 months</th><th>12 month Vl Date</th><th>Last visit date</th><th>Patient Outcome</th></tr></thead><tbody>";
       String id="",year="",month="",county="",sub_county="",facility="",mfl_code="",ccc_no="",gender="",current_age="",date_confirmed_hiv_pos="",enrollment_date="",art_start_date="",baseline_who_stage="",baseline_cd4_cell_count_perc="",initial_vl="",initial_vl_date="",repeat_vl_value="",repeat_vl_date="",vl_12_months_value="",vl_12_months_date="",last_visit_date="",patient_outcome="",yearmonth="";
-      int num=0;
+       JSONObject obj_det = new JSONObject();
+        String error_details="",period_error = "Error While loading <b>2b.Test & Start -Cohort Summary</b> Sheet: <br>";
+        boolean has_error=false;
+        
         Iterator rowIterator = worksheet.iterator();
 
          HSSFRow row = worksheet.getRow(2);
@@ -1818,9 +2612,13 @@ if(rowi.getCell(13)!=null){
                    
                }
             }
+            if(month.equals("") || cellmn==null){
+               has_error=true;  
+               period_error+="Missing Month <br>";
+            }
 // **************************************************************************           
 // **************************************Year***********************
-            HSSFCell cellyr = row.getCell((short) 12);
+            HSSFCell cellyr = row.getCell((short) 11);
             if(cellyr!=null){
             switch (cellyr.getCellType()) {
                    case 0:
@@ -1833,6 +2631,10 @@ if(rowi.getCell(13)!=null){
                        break;
                }
         }
+            if(year.equals("") || cellyr==null){
+               has_error=true;  
+               period_error+="Missing Year <br>";
+            }
 // ************************************************************************** 
             
             JSONObject period_data = CleanPeriod(year,month,conn);
@@ -1847,8 +2649,12 @@ if(rowi.getCell(13)!=null){
 //*******************************YearMonth************************
 
         
-        int i=5,y=0;
+         if(!has_error){
+        int i=5,y=0,skipped_records=0,added_records=0;
         while(rowIterator.hasNext()){
+            error_details = "";
+            has_error=false;
+        
             id=county=sub_county=facility=mfl_code=ccc_no=gender=current_age=date_confirmed_hiv_pos=enrollment_date=art_start_date=baseline_who_stage=baseline_cd4_cell_count_perc=initial_vl=initial_vl_date=repeat_vl_value=repeat_vl_date=vl_12_months_value=vl_12_months_date=last_visit_date=patient_outcome="";
       
              HSSFRow rowi = worksheet.getRow(i);
@@ -1871,6 +2677,8 @@ if(rowi.getCell(13)!=null){
                   
                }
             }
+            
+            error_details+="<td>"+county+"</td>";
 //*******************************End of county************************
                
 // **************************************Sub county***********************
@@ -1888,6 +2696,8 @@ if(rowi.getCell(13)!=null){
                    
                }
             }
+             
+            error_details+="<td>"+sub_county+"</td>";
 //*******************************End of sub-county************************
 
 // **************************************Facility Name***********************
@@ -1905,6 +2715,8 @@ if(rowi.getCell(13)!=null){
                    
                }
             }
+            
+            error_details+="<td>"+facility+"</td>";
 //*******************************End of facility name************************;
                
 // **************************************mflcode***********************
@@ -1921,6 +2733,13 @@ if(rowi.getCell(13)!=null){
                        break;
                }
             }
+             else{
+                has_error=true;
+            }
+            if(mfl_code.equals("")){
+               has_error=true;  
+            }
+            error_details+="<td>"+mfl_code+"</td>";
 //*******************************End of mflcode************************
 
 // **************************************CCC Number***********************
@@ -1938,6 +2757,13 @@ if(rowi.getCell(13)!=null){
                        break;
                }
             }
+             else{
+                has_error=true;
+            }
+            if(ccc_no.equals("")){
+               has_error=true;  
+            }
+            error_details+="<td>"+ccc_no+"</td>";
 //*******************************End of ccc number************************
                
 // **************************************gender***********************
@@ -1954,6 +2780,8 @@ if(rowi.getCell(13)!=null){
                        break;
                }
             }
+            
+            error_details+="<td>"+gender+"</td>";
 //*******************************End of gender************************
 
                
@@ -1972,6 +2800,7 @@ if(rowi.getCell(13)!=null){
                    
                }
             }
+             error_details+="<td>"+current_age+"</td>";
 //*******************************End of current age************************
              
 // **************************************date confirmed HIV+***********************
@@ -1988,6 +2817,7 @@ if(rowi.getCell(7).getCellType()==0){
         }
     }
            }
+            error_details+="<td>"+date_confirmed_hiv_pos+"</td>";
 //*******************************End of DATE CONFIRMED hiv pos************************
                
 // **************************************enrollment date***********************
@@ -2004,6 +2834,7 @@ if(rowi.getCell(8)!=null){
         }
     }
  }
+ error_details+="<td>"+enrollment_date+"</td>";
 //*******************************End of enrollment date************************
 
 
@@ -2021,6 +2852,7 @@ if(rowi.getCell(9)!=null){
         }
     }
 }
+ error_details+="<td>"+art_start_date+"</td>";
 //*******************************End of art start date************************
 
 // ************************************** baseline WHO stage ***********************
@@ -2038,6 +2870,7 @@ if(rowi.getCell(9)!=null){
                    
                }
             }
+             error_details+="<td>"+baseline_who_stage+"</td>";
 //*******************************End of baseline WHO stage************************
 
 
@@ -2057,6 +2890,7 @@ System.out.println("at pos : "+i+" mflcode : "+mfl_code);
                    
                }
             }
+             error_details+="<td>"+baseline_cd4_cell_count_perc+"</td>";
 //*******************************End of baseline cd4 cell count percentage************************
 
 
@@ -2075,6 +2909,7 @@ System.out.println("at pos : "+i+" mflcode : "+mfl_code);
                   
                }
             }
+             error_details+="<td>"+initial_vl+"</td>";
 //*******************************End of initial vl************************
 
 
@@ -2091,7 +2926,8 @@ if(rowi.getCell(13)!=null){
          initial_vl_date = rowi.getCell(13).getStringCellValue();
         }
     }
-}            
+}      
+ error_details+="<td>"+initial_vl_date+"</td>";
 //*******************************End of art start date************************
 
 
@@ -2110,6 +2946,7 @@ if(rowi.getCell(13)!=null){
                    
                }
             }
+             error_details+="<td>"+repeat_vl_value+"</td>";
 //*******************************End of repeat vl results************************
 
 
@@ -2127,6 +2964,7 @@ if(rowi.getCell(13)!=null){
             }
     }
         }
+         error_details+="<td>"+repeat_vl_date+"</td>";
 //*******************************End of repeat vl date************************
 
 // **************************************vl results at 12 months***********************
@@ -2144,6 +2982,7 @@ if(rowi.getCell(13)!=null){
                    
                }
             }
+             error_details+="<td>"+vl_12_months_value+"</td>";
 //*******************************End of vl results at 12 months************************
 
 
@@ -2161,6 +3000,7 @@ if(rowi.getCell(13)!=null){
              }
      }
         }
+         error_details+="<td>"+vl_12_months_date+"</td>";
 //*******************************End of 12 months vl date************************
 
 
@@ -2178,6 +3018,7 @@ if(rowi.getCell(13)!=null){
                   }
           }
     }
+     error_details+="<td>"+last_visit_date+"</td>";
 //*******************************End of last vl date************************
 
 // **************************************patient outcomes***********************
@@ -2195,6 +3036,7 @@ if(rowi.getCell(13)!=null){
                    
                }
             }
+             error_details+="<td>"+patient_outcome+"</td>";
 //*******************************End of patient outcomes************************
 
 
@@ -2203,7 +3045,12 @@ if(rowi.getCell(13)!=null){
             id = mfl_code+"_"+yearmonth+"_"+ccc_no;
 
       //       END OF READING VALUES
-
+    if(has_error){
+      all_error_details+="<tr><td>"+i+"</td>"+error_details+"</tr>"; 
+      skipped_records++;
+    }
+    else{
+        added_records++;
             //GET CORRECT COUNTY, SUBCOUNTY DATA FOR THIS FACILITY
             JSONObject obj_facil = GetFacilityDetails(conn, mfl_code);
             
@@ -2241,525 +3088,33 @@ if(rowi.getCell(13)!=null){
                 conn.pst.executeUpdate();
             
                 System.out.println("query test n start______ : "+conn.pst);
-            num += conn.pst.executeUpdate();
-              if(num>0){
-                 
-              }  
-              else{
-                
-              }
-            }
-            else{
-               
-            }
-            
-//***************************************************************************
-        i++;
-        }
-        
-      
-      return num;
-    }
- 
-    public int ARTCurrentLossXLSX (XSSFSheet worksheet, dbConn conn) throws SQLException{
-      String id="",year="",month="",county="",sub_county="",facility="",mfl_code="",ccc_no="",gender="",current_age="",date_confirmed_hiv_pos="",enrollment_date="",art_start_date="",baseline_who_stage="",baseline_cd4_cell_count_perc="",initial_vl="",initial_vl_date="",repeat_vl_value="",repeat_vl_date="",vl_12_months_value="",vl_12_months_date="",last_visit_date="",expected_return_date="",patient_status="",date_resumed_tx="",yearmonth="";
-      int num=0;
-        Iterator rowIterator = worksheet.iterator();
-
-         XSSFRow row = worksheet.getRow(2);
-// **************************************Month***********************
-            XSSFCell cellmn = row.getCell((short) 4);
-            if(cellmn!=null){
-            switch (cellmn.getCellType()) {
-                   case 0:
-                       //numeric
-                       month =""+(int)cellmn.getNumericCellValue();
-                       break;
-                   case 1:
-                       //string
-                       month =cellmn.getStringCellValue();
-                       break;
-                   
-               }
-            }
-// **************************************************************************           
-// **************************************Year***********************
-            XSSFCell cellyr = row.getCell((short) 12);
-            if(cellyr!=null){
-            switch (cellyr.getCellType()) {
-                   case 0:
-                       //numeric
-                       year =""+(int)cellyr.getNumericCellValue();
-                       break;
-                   case 1:
-                       //string
-                       year =cellyr.getStringCellValue();
-                       break;
-               }
-        }
-// ************************************************************************** 
-            
-            JSONObject period_data = CleanPeriod(year,month,conn);
-            
-            yearmonth = period_data.get("yearmonth").toString();
-            year = period_data.get("year").toString();
-            month = period_data.get("month").toString();
-            
-                    
-            
-            System.out.println("yearmonth : "+yearmonth+" year : "+year+" month :: "+month);
-//*******************************YearMonth************************
-
-        
-        int i=5,y=0;
-        while(rowIterator.hasNext()){
-            id=county=sub_county=facility=mfl_code=ccc_no=gender=current_age=date_confirmed_hiv_pos=enrollment_date=art_start_date=baseline_who_stage=baseline_cd4_cell_count_perc=initial_vl=initial_vl_date=repeat_vl_value=repeat_vl_date=vl_12_months_value=vl_12_months_date=last_visit_date=expected_return_date=patient_status=date_resumed_tx="";
-
-             XSSFRow rowi = worksheet.getRow(i);
-                if(rowi==null){
-                 break;
-                }
-
-// **************************************County***********************
-            XSSFCell cell0 = rowi.getCell((short) 0);
-            if(cell0!=null){
-            switch (cell0.getCellType()) {
-                   case 0:
-                       //numeric
-                       county =""+(int)cell0.getNumericCellValue();
-                       break;
-                   case 1:
-                       //string
-                       county =cell0.getStringCellValue();
-                       break;
-                  
-               }
-            }
-//*******************************End of county************************
-               
-// **************************************Sub county***********************
-            XSSFCell cell1 = rowi.getCell((short) 1);
-            if(cell1!=null){
-            switch (cell1.getCellType()) {
-                   case 0:
-                       //numeric
-                       sub_county =""+(int)cell1.getNumericCellValue();
-                       break;
-                   case 1:
-                       //string
-                       sub_county =cell1.getStringCellValue();
-                       break;
-                   
-               }
-            }
-//*******************************End of sub-county************************
-
-// **************************************Facility Name***********************
-            XSSFCell cell2 = rowi.getCell((short) 2);
-            if(cell2!=null){
-            switch (cell2.getCellType()) {
-                   case 0:
-                       //numeric
-                       facility =""+(int)cell2.getNumericCellValue();
-                       break;
-                   case 1:
-                       //string
-                       facility =cell2.getStringCellValue();
-                       break;
-                   
-               }
-            }
-//*******************************End of facility name************************;
-               
-// **************************************mflcode***********************
-            XSSFCell cell3 = rowi.getCell((short) 3);
-            if(cell3!=null){
-            switch (cell3.getCellType()) {
-                   case 0:
-                       //numeric
-                       mfl_code =""+(int)cell3.getNumericCellValue();
-                       break;
-                   case 1:
-                       //string
-                       mfl_code =cell3.getStringCellValue();
-                       break;
-               }
-            }
-//*******************************End of mflcode************************
-
-// **************************************CCC Number***********************
-        
-            XSSFCell cell4 = rowi.getCell((short) 4);
-            if(cell4!=null){
-            switch (cell4.getCellType()) {
-                   case 0:
-                       //numeric
-                       ccc_no =""+(int)cell4.getNumericCellValue();
-                       break;
-                   case 1:
-                       //string
-                       ccc_no =cell4.getStringCellValue();
-                       break;
-               }
-            }
-//*******************************End of ccc number************************
-               
-// **************************************gender***********************
-            XSSFCell cell5 = rowi.getCell((short) 5);
-            if(cell5!=null){
-            switch (cell5.getCellType()) {
-                   case 0:
-                       //numeric
-                       gender =""+(int)cell5.getNumericCellValue();
-                       break;
-                   case 1:
-                       //string
-                       gender =cell5.getStringCellValue();
-                       break;
-               }
-            }
-//*******************************End of gender************************
-
-               
-// **************************************current age***********************
-            XSSFCell cell6 = rowi.getCell((short) 6);
-            if(cell6!=null){
-            switch (cell6.getCellType()) {
-                   case 0:
-                       //numeric
-                       current_age =""+(int)cell6.getNumericCellValue();
-                       break;
-                   case 1:
-                       //string
-                       current_age =cell6.getStringCellValue();
-                       break;
-                   
-               }
-            }
-//*******************************End of current age************************
-             
-// **************************************date confirmed HIV+***********************
-           if(rowi.getCell(7)!=null){
-if(rowi.getCell(7).getCellType()==0){
-          date_confirmed_hiv_pos =""+(int)rowi.getCell(7).getNumericCellValue();  
-        }
-        else{
-           if (rowi.getCell(7).getCellTypeEnum().equals(NUMERIC)) {
-            date_confirmed_hiv_pos = dateformat.format(rowi.getCell(7).getDateCellValue());
-        }
-        else{
-         date_confirmed_hiv_pos = rowi.getCell(7).getStringCellValue();
-        }
-    }
+           conn.pst.executeUpdate();
            }
-//*******************************End of DATE CONFIRMED hiv pos************************
-               
-// **************************************enrollment date***********************
-if(rowi.getCell(8)!=null){
-          if(rowi.getCell(8).getCellType()==0){
-          enrollment_date =""+(int)rowi.getCell(8).getNumericCellValue();  
-        }
-        else{
-           if (rowi.getCell(8).getCellTypeEnum().equals(NUMERIC)) {
-            enrollment_date = dateformat.format(rowi.getCell(8).getDateCellValue());
-        }
-        else{
-         enrollment_date = rowi.getCell(8).getStringCellValue();
-        }
-    }
- }
-//*******************************End of enrollment date************************
-
-
-// **************************************ART Start date***********************
-if(rowi.getCell(9)!=null){
-  if(rowi.getCell(9).getCellType()==0){
-  art_start_date =""+(int)rowi.getCell(9).getNumericCellValue();  
-    }
-    else{
-           if (rowi.getCell(9).getCellTypeEnum().equals(NUMERIC)) {
-            art_start_date = dateformat.format(rowi.getCell(9).getDateCellValue());
-        }
-        else{
-         art_start_date = rowi.getCell(9).getStringCellValue();
-        }
-    }
-}
-//*******************************End of art start date************************
-
-// ************************************** baseline WHO stage ***********************
-            XSSFCell cell10 = rowi.getCell((short) 10);
-            if(cell10!=null){
-            switch (cell10.getCellType()) {
-                   case 0:
-                       //numeric
-                       baseline_who_stage =""+(int)cell10.getNumericCellValue();
-                       break;
-                   case 1:
-                       //string
-                       baseline_who_stage =cell10.getStringCellValue();
-                       break;
-                   
-               }
-            }
-//*******************************End of baseline WHO stage************************
-
-
-// **************************************baseline cd4 cell count percentage***********************
-System.out.println("at pos : "+i+" mflcode : "+mfl_code);
-            XSSFCell cell11 = rowi.getCell((short) 11);
-            if(cell11!=null){
-            switch (cell11.getCellType()) {
-                   case 0:
-                       //numeric
-                       baseline_cd4_cell_count_perc =""+(int)cell11.getNumericCellValue();
-                       break;
-                   case 1:
-                       //string
-                       baseline_cd4_cell_count_perc =cell11.getStringCellValue();
-                       break;
-                   
-               }
-            }
-//*******************************End of baseline cd4 cell count percentage************************
-
-
-// **************************************initial vl***********************
-            XSSFCell cell12 = rowi.getCell((short) 12);
-            if(cell12!=null){
-            switch (cell12.getCellType()) {
-                   case 0:
-                       //numeric
-                       initial_vl =""+(int)cell12.getNumericCellValue();
-                       break;
-                   case 1:
-                       //string
-                       initial_vl =cell12.getStringCellValue();
-                       break;
-                  
-               }
-            }
-//*******************************End of initial vl************************
-
-
-// **************************************art start date***********************
-if(rowi.getCell(13)!=null){
-     if(rowi.getCell(13).getCellType()==0){
-  initial_vl_date =""+(int)rowi.getCell(13).getNumericCellValue();  
-    }
-    else{
-           if (rowi.getCell(13).getCellTypeEnum().equals(NUMERIC)) {
-            initial_vl_date = dateformat.format(rowi.getCell(13).getDateCellValue());
-        }
-        else{
-         initial_vl_date = rowi.getCell(13).getStringCellValue();
-        }
-    }
-}            
-//*******************************End of art start date************************
-
-
-// **************************************repeat vl results***********************
-            XSSFCell cell14 = rowi.getCell((short) 14);
-            if(cell14!=null){
-            switch (cell14.getCellType()) {
-                   case 0:
-                       //numeric
-                       repeat_vl_value =""+(int)cell14.getNumericCellValue();
-                       break;
-                   case 1:
-                       //string
-                       repeat_vl_value =cell14.getStringCellValue();
-                       break;
-                   
-               }
-            }
-//*******************************End of repeat vl results************************
-
-
-// **************************************repeat vl date***********************
-        if(rowi.getCell(15)!=null) {  
-          if(rowi.getCell(15).getCellType()==0){
-      repeat_vl_date =""+(int)rowi.getCell(15).getNumericCellValue();  
-        }
-        else{
-               if (rowi.getCell(15).getCellTypeEnum().equals(NUMERIC)) {
-                repeat_vl_date = dateformat.format(rowi.getCell(15).getDateCellValue());
-            }
-            else{
-             repeat_vl_date = rowi.getCell(15).getStringCellValue();
-            }
-    }
-        }
-//*******************************End of repeat vl date************************
-
-// **************************************vl results at 12 months***********************
-            XSSFCell cell16 = rowi.getCell((short) 16);
-            if(cell16!=null){
-            switch (cell16.getCellType()) {
-                   case 0:
-                       //numeric
-                       vl_12_months_value =""+(int)cell16.getNumericCellValue();
-                       break;
-                   case 1:
-                       //string
-                       vl_12_months_value =cell16.getStringCellValue();
-                       break;
-                   
-               }
-            }
-//*******************************End of vl results at 12 months************************
-
-
-// **************************************12 months vl date***********************
-        if(rowi.getCell(17)!=null){
-    if(rowi.getCell(17).getCellType()==0){
-           vl_12_months_date =""+(int)rowi.getCell(17).getNumericCellValue();  
-             }
-             else{
-                if (rowi.getCell(17).getCellTypeEnum().equals(NUMERIC)) {
-                 vl_12_months_date = dateformat.format(rowi.getCell(17).getDateCellValue());
-             }
-             else{
-              vl_12_months_date = rowi.getCell(17).getStringCellValue();
-             }
-     }
-        }
-//*******************************End of 12 months vl date************************
-
-
-// **************************************last vl date***********************
-    if(rowi.getCell(18)!=null){
-                 if(rowi.getCell(18).getCellType()==0){
-            last_visit_date =""+(int)rowi.getCell(18).getNumericCellValue();  
-              }
-              else{
-                     if (rowi.getCell(18).getCellTypeEnum().equals(NUMERIC)) {
-                      last_visit_date = dateformat.format(rowi.getCell(18).getDateCellValue());
-                  }
-                  else{
-                   last_visit_date = rowi.getCell(18).getStringCellValue();
-                  }
-          }
-    }
-//*******************************End of last vl date************************
-
-// **************************************expected return date***********************
-              if(rowi.getCell(19)!=null){
-                 if(rowi.getCell(19).getCellType()==0){
-            expected_return_date =""+(int)rowi.getCell(19).getNumericCellValue();  
-              }
-              else{
-                     if (rowi.getCell(19).getCellTypeEnum().equals(NUMERIC)) {
-                      expected_return_date = dateformat.format(rowi.getCell(19).getDateCellValue());
-                  }
-                  else{
-                   expected_return_date = rowi.getCell(19).getStringCellValue();
-                  }
-          }
-    }
-//*******************************End of expected return date************************
-
-// **************************************patient status***********************
-            XSSFCell cell20 = rowi.getCell((short) 20);
-            if(cell20!=null){
-            switch (cell20.getCellType()) {
-                   case 0:
-                       //numeric
-                       patient_status =""+(int)cell20.getNumericCellValue();
-                       break;
-                   case 1:
-                       //string
-                       patient_status =cell20.getStringCellValue();
-                       break;
-                   
-               }
-            }
-//*******************************End of patient status************************
-
-// **************************************date patient resument tx***********************
-              if(rowi.getCell(21)!=null){
-                 if(rowi.getCell(21).getCellType()==0){
-            date_resumed_tx =""+(int)rowi.getCell(21).getNumericCellValue();  
-              }
-              else{
-                     if (rowi.getCell(21).getCellTypeEnum().equals(NUMERIC)) {
-                      date_resumed_tx = dateformat.format(rowi.getCell(21).getDateCellValue());
-                  }
-                  else{
-                   date_resumed_tx = rowi.getCell(21).getStringCellValue();
-                  }
-          }
-    }
-//*******************************End of date patient resument tx************************
-
-//     generate id
-
-            id = mfl_code+"_"+yearmonth+"_"+ccc_no;
-
-      //       END OF READING VALUES
-
-            //GET CORRECT COUNTY, SUBCOUNTY DATA FOR THIS FACILITY
-            JSONObject obj_facil = GetFacilityDetails(conn, mfl_code);
-            
-            if(obj_facil.containsKey("county")){
-              county = obj_facil.get("county").toString();
-              sub_county = obj_facil.get("sub_county").toString();
-              facility = obj_facil.get("facility").toString();
-
-                String query = "REPLACE INTO art_current_net_loss SET id=?,year=?,month=?,county=?,sub_county=?,facility=?,mfl_code=?,ccc_no=?,gender=?,current_age=?,date_confirmed_hiv_pos=?,enrollment_date=?,art_start_date=?,baseline_who_stage=?,baseline_cd4_cell_count_perc=?,initial_vl=?,initial_vl_date=?,repeat_vl_value=?,repeat_vl_date=?,vl_12_months_value=?,vl_12_months_date=?,last_visit_date=?,yearmonth=?,expected_return_date=?,patient_status=?,date_resumed_tx=?";
-                conn.pst = conn.conn.prepareStatement(query);
-                conn.pst.setString(1, id);
-                conn.pst.setString(2, year);
-                conn.pst.setString(3, month);
-                conn.pst.setString(4, county);
-                conn.pst.setString(5, sub_county);
-                conn.pst.setString(6, facility);
-                conn.pst.setString(7, mfl_code);
-                conn.pst.setString(8, ccc_no);
-                conn.pst.setString(9, gender);
-                conn.pst.setString(10, current_age);
-                conn.pst.setString(11, date_confirmed_hiv_pos);
-                conn.pst.setString(12, enrollment_date);
-                conn.pst.setString(13, art_start_date);
-                conn.pst.setString(14, baseline_who_stage);
-                conn.pst.setString(15, baseline_cd4_cell_count_perc);
-                conn.pst.setString(16, initial_vl);
-                conn.pst.setString(17, initial_vl_date);
-                conn.pst.setString(18, repeat_vl_value);
-                conn.pst.setString(19, repeat_vl_date);
-                conn.pst.setString(20, vl_12_months_value);
-                conn.pst.setString(21, vl_12_months_date);
-                conn.pst.setString(22, last_visit_date);
-                conn.pst.setString(23, yearmonth);
-                conn.pst.setString(24, expected_return_date);
-                conn.pst.setString(25, patient_status);
-                conn.pst.setString(26, date_resumed_tx);
-                conn.pst.executeUpdate();
-            
-                System.out.println("query ART current net loss______ : "+conn.pst);
-            num += conn.pst.executeUpdate();
-              if(num>0){
-                 
-              }  
-              else{
-                
-              }
-            }
             else{
                
             }
-            
+        }
 //***************************************************************************
         i++;
         }
-        
-      
-      return num;
+               
+     obj_det.put("added", added_records);
+     obj_det.put("skipped", skipped_records);
+     obj_det.put("skipped_details", all_error_details+"</tbody>");
     }
-    public int ARTCurrentLossXLS (HSSFSheet worksheet, dbConn conn) throws SQLException{
+          else { //has errors while loading excel
+          obj_det.put("period_error", period_error);       
+            }
+         
+     obj_det.put("sheetname", "2b.Test & Start -Cohort Summary");
+     return obj_det;
+    }
+    public JSONObject ARTCurrentLoss (HSSFSheet worksheet, dbConn conn) throws SQLException{
+    String all_error_details = "<thead class=\"thead-dark\"><tr><th>Row Number</th><th>County</th><th>Sub County</th><th>Health Facility</th><th>MFL Code</th><th>Patient CCC Number</th><th>Gender</th><th>Current Age</th><th>Date confirmed HIV Positive</th><th>Enrollment date</th><th>ART start date</th><th>Baseline WHO Stage</th><th>Baseline CD4 Count or Percent</th><th>Initial VL Result</th><th>Initial Vl Date</th><th>Repeat VL  result</th><th>Repeat VL date</th><th>VL result at 12 months</th><th>12 month Vl Date</th><th>Last visit date</th><th>Expected return date (TCA)</th><th>Patient Status</th><th>Date patient resumed Tx</th></tr></thead><tbody>";
       String id="",year="",month="",county="",sub_county="",facility="",mfl_code="",ccc_no="",gender="",current_age="",date_confirmed_hiv_pos="",enrollment_date="",art_start_date="",baseline_who_stage="",baseline_cd4_cell_count_perc="",initial_vl="",initial_vl_date="",repeat_vl_value="",repeat_vl_date="",vl_12_months_value="",vl_12_months_date="",last_visit_date="",expected_return_date="",patient_status="",date_resumed_tx="",yearmonth="";
-      int num=0;
+           JSONObject obj_det = new JSONObject();
+        String error_details="",period_error = "Error While loading <b>3b. ART Current Net Loss-Var</b> Sheet: <br>";
+        boolean has_error=false;
         Iterator rowIterator = worksheet.iterator();
 
          HSSFRow row = worksheet.getRow(2);
@@ -2778,9 +3133,14 @@ if(rowi.getCell(13)!=null){
                    
                }
             }
+            if(month.equals("") || cellmn==null){
+               has_error=true;  
+               period_error+="Missing Month <br>";
+            }
+            
 // **************************************************************************           
 // **************************************Year***********************
-            HSSFCell cellyr = row.getCell((short) 12);
+            HSSFCell cellyr = row.getCell((short) 11);
             if(cellyr!=null){
             switch (cellyr.getCellType()) {
                    case 0:
@@ -2793,8 +3153,12 @@ if(rowi.getCell(13)!=null){
                        break;
                }
         }
+        if(year.equals("") || cellyr==null){
+               has_error=true;  
+               period_error+="Missing Year <br>";
+            }
 // ************************************************************************** 
-            
+           
             JSONObject period_data = CleanPeriod(year,month,conn);
             
             yearmonth = period_data.get("yearmonth").toString();
@@ -2805,10 +3169,12 @@ if(rowi.getCell(13)!=null){
             
             System.out.println("yearmonth : "+yearmonth+" year : "+year+" month :: "+month);
 //*******************************YearMonth************************
-
-        
-        int i=5,y=0;
+    if(!has_error){
+        int i=5,y=0,skipped_records=0,added_records=0;
         while(rowIterator.hasNext()){
+            error_details = "";
+            has_error=false;
+        
             id=county=sub_county=facility=mfl_code=ccc_no=gender=current_age=date_confirmed_hiv_pos=enrollment_date=art_start_date=baseline_who_stage=baseline_cd4_cell_count_perc=initial_vl=initial_vl_date=repeat_vl_value=repeat_vl_date=vl_12_months_value=vl_12_months_date=last_visit_date=expected_return_date=patient_status=date_resumed_tx="";
 
              HSSFRow rowi = worksheet.getRow(i);
@@ -2831,6 +3197,7 @@ if(rowi.getCell(13)!=null){
                   
                }
             }
+            error_details+="<td>"+county+"</td>";
 //*******************************End of county************************
                
 // **************************************Sub county***********************
@@ -2848,6 +3215,7 @@ if(rowi.getCell(13)!=null){
                    
                }
             }
+            error_details+="<td>"+sub_county+"</td>";
 //*******************************End of sub-county************************
 
 // **************************************Facility Name***********************
@@ -2865,6 +3233,7 @@ if(rowi.getCell(13)!=null){
                    
                }
             }
+            error_details+="<td>"+facility+"</td>";
 //*******************************End of facility name************************;
                
 // **************************************mflcode***********************
@@ -2881,6 +3250,13 @@ if(rowi.getCell(13)!=null){
                        break;
                }
             }
+            else{
+                has_error=true;
+            }
+            if(mfl_code.equals("")){
+               has_error=true;  
+            }
+            error_details+="<td>"+mfl_code+"</td>";
 //*******************************End of mflcode************************
 
 // **************************************CCC Number***********************
@@ -2898,6 +3274,13 @@ if(rowi.getCell(13)!=null){
                        break;
                }
             }
+            else{
+                has_error=true;
+            }
+            if(ccc_no.equals("")){
+               has_error=true;  
+            }
+            error_details+="<td>"+ccc_no+"</td>";
 //*******************************End of ccc number************************
                
 // **************************************gender***********************
@@ -2914,6 +3297,7 @@ if(rowi.getCell(13)!=null){
                        break;
                }
             }
+            error_details+="<td>"+gender+"</td>";
 //*******************************End of gender************************
 
                
@@ -2932,6 +3316,7 @@ if(rowi.getCell(13)!=null){
                    
                }
             }
+            error_details+="<td>"+current_age+"</td>";
 //*******************************End of current age************************
              
 // **************************************date confirmed HIV+***********************
@@ -2948,6 +3333,7 @@ if(rowi.getCell(7).getCellType()==0){
         }
     }
            }
+           error_details+="<td>"+date_confirmed_hiv_pos+"</td>";
 //*******************************End of DATE CONFIRMED hiv pos************************
                
 // **************************************enrollment date***********************
@@ -2964,6 +3350,7 @@ if(rowi.getCell(8)!=null){
         }
     }
  }
+error_details+="<td>"+enrollment_date+"</td>";
 //*******************************End of enrollment date************************
 
 
@@ -2981,6 +3368,7 @@ if(rowi.getCell(9)!=null){
         }
     }
 }
+error_details+="<td>"+art_start_date+"</td>";
 //*******************************End of art start date************************
 
 // ************************************** baseline WHO stage ***********************
@@ -2998,6 +3386,7 @@ if(rowi.getCell(9)!=null){
                    
                }
             }
+            error_details+="<td>"+baseline_who_stage+"</td>";
 //*******************************End of baseline WHO stage************************
 
 
@@ -3017,6 +3406,7 @@ System.out.println("at pos : "+i+" mflcode : "+mfl_code);
                    
                }
             }
+            error_details+="<td>"+baseline_cd4_cell_count_perc+"</td>";
 //*******************************End of baseline cd4 cell count percentage************************
 
 
@@ -3035,6 +3425,7 @@ System.out.println("at pos : "+i+" mflcode : "+mfl_code);
                   
                }
             }
+            error_details+="<td>"+initial_vl+"</td>";
 //*******************************End of initial vl************************
 
 
@@ -3051,7 +3442,8 @@ if(rowi.getCell(13)!=null){
          initial_vl_date = rowi.getCell(13).getStringCellValue();
         }
     }
-}            
+}    
+error_details+="<td>"+initial_vl_date+"</td>";
 //*******************************End of art start date************************
 
 
@@ -3070,6 +3462,7 @@ if(rowi.getCell(13)!=null){
                    
                }
             }
+            error_details+="<td>"+repeat_vl_value+"</td>";
 //*******************************End of repeat vl results************************
 
 
@@ -3087,6 +3480,7 @@ if(rowi.getCell(13)!=null){
             }
     }
         }
+        error_details+="<td>"+repeat_vl_date+"</td>";
 //*******************************End of repeat vl date************************
 
 // **************************************vl results at 12 months***********************
@@ -3104,6 +3498,7 @@ if(rowi.getCell(13)!=null){
                    
                }
             }
+            error_details+="<td>"+vl_12_months_value+"</td>";
 //*******************************End of vl results at 12 months************************
 
 
@@ -3121,6 +3516,7 @@ if(rowi.getCell(13)!=null){
              }
      }
         }
+        error_details+="<td>"+vl_12_months_date+"</td>";
 //*******************************End of 12 months vl date************************
 
 
@@ -3138,6 +3534,7 @@ if(rowi.getCell(13)!=null){
                   }
           }
     }
+    error_details+="<td>"+last_visit_date+"</td>";
 //*******************************End of last vl date************************
 
 // **************************************expected return date***********************
@@ -3154,6 +3551,7 @@ if(rowi.getCell(13)!=null){
                   }
           }
     }
+ error_details+="<td>"+expected_return_date+"</td>";             
 //*******************************End of expected return date************************
 
 // **************************************patient status***********************
@@ -3171,6 +3569,7 @@ if(rowi.getCell(13)!=null){
                    
                }
             }
+            error_details+="<td>"+patient_status+"</td>";
 //*******************************End of patient status************************
 
 // **************************************date patient resument tx***********************
@@ -3187,6 +3586,7 @@ if(rowi.getCell(13)!=null){
                   }
           }
     }
+              error_details+="<td>"+date_resumed_tx+"</td>";
 //*******************************End of date patient resument tx************************
 
 //     generate id
@@ -3194,7 +3594,12 @@ if(rowi.getCell(13)!=null){
             id = mfl_code+"_"+yearmonth+"_"+ccc_no;
 
       //       END OF READING VALUES
-
+if(has_error){
+  all_error_details+="<tr><td>"+i+"</td>"+error_details+"</tr>"; 
+  skipped_records++;
+}
+else{
+    added_records++;
             //GET CORRECT COUNTY, SUBCOUNTY DATA FOR THIS FACILITY
             JSONObject obj_facil = GetFacilityDetails(conn, mfl_code);
             
@@ -3234,26 +3639,33 @@ if(rowi.getCell(13)!=null){
                 conn.pst.executeUpdate();
             
                 System.out.println("query ART current net loss______ : "+conn.pst);
-            num += conn.pst.executeUpdate();
-              if(num>0){
-                 
-              }  
-              else{
-                
-              }
+                conn.pst.executeUpdate();
+              
             }
             else{
                
             }
-            
+        }
 //***************************************************************************
         i++;
         }
+               
+     obj_det.put("added", added_records);
+     obj_det.put("skipped", skipped_records);
+     obj_det.put("skipped_details", all_error_details+"</tbody>");
+    }
+          else { //has errors while loading excel
+          obj_det.put("period_error", period_error);       
+            }
+
+     
+     obj_det.put("sheetname", "3b. ART Current Net Loss-Var");
         
       
-      return num;
+      return obj_det;
     }
+    
  
-
+ 
     
 }

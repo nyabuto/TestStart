@@ -80,9 +80,9 @@
                             </form>
                     </div>
                   </div>
-                    <div style="margin-left: 15%;">
-                    <div id="uploaded" class="thead-light" style="text-align: center;">
-                    <!--uploaded-->
+                    <div style="margin-left: 2%;">
+                    <div id="response" class="thead-light" style="text-align: center;">
+                    <!--upload response-->
                     </div>
                     <br>
                     <div id="errors" class="thead-light">
@@ -107,42 +107,46 @@
 
 
     <%if(session.getAttribute("upload_errors")!=null){
-        int uploaded=0; 
-        JSONObject finalobj = new JSONObject();
+      String output="";
         JSONArray jarray = new JSONArray();
-        finalobj = (JSONObject)session.getAttribute("upload_errors");
-//        out.println(finalobj);
-        jarray = (JSONArray)finalobj.get("data");
-        uploaded = (Integer)finalobj.get("uploaded");
-        out.println(uploaded);
-//        out.println(jarray);
-String files_uploaded = "<b style=\"color:red;\">"+uploaded+"</b> <b style=\"color:black;\">Files added/updated successfully.</b>";
-        String output="<div style=\"font-weight:900; text-align:center;\">The following files were not uploaded:</div><br>"
-                + "<table  class=\"table\"><thead class=\"thead-dark\">"
-                + "<tr><th>No.</th><th>File Name</th><th>Error Description</th></tr></thead><tbody>";
-        int counter=0;
-            for(int i=0;i<jarray.size();i++) {
-                counter++;
-                JSONObject obj = (JSONObject)jarray.get(i);
-//                out.println(obj);
-               String description = obj.get("description").toString();
-               String file_name =  obj.get("file_name").toString();
-               
-              output+="<tr><td>"+(i+1)+"</td><td>"+file_name+"</td><td>"+description+"</td></tr>"; 
+        jarray = (JSONArray)session.getAttribute("upload_errors");
+        for(int i=0;i<3;i++){
+            output += "<div>";
+            JSONObject objdata = new JSONObject();
+            objdata =  (JSONObject)jarray.get(i);
+            if(objdata.containsKey("period_error")){
+                //show upload error missing year or month
+                String error = objdata.get("period_error").toString();
+                String sheetname =  objdata.get("sheetname").toString();
+                out.println(sheetname);
+                output+="<div style=\"font-size:20px;\"><b>"+sheetname+"</b><br><font color=\"red\">"+error+"</font><br></div>";
             }
-        output+="</tbody></table>";
+            else{
+                String added = objdata.get("added").toString();
+                String skipped_details =objdata.get("skipped_details").toString();
+                int skipped =  Integer.parseInt(objdata.get("skipped").toString());
+                String sheetname =  objdata.get("sheetname").toString();
+//                out.println(sheetname);
+//                String sheetname =  "";
+                
+                output+="<div style=\"font-size:20px;\"><b>"+sheetname+"</b><br><font color=\"blue\">"+added+" records added</font> and <font color=\"red\">"+skipped+" records skipped:</font><br></div>";
+                if(skipped>0){
+                output+="<table class=\"table\" style=\"font-size:12px;\">"+skipped_details+"</table>";
+                }
+            }
+            output+="</div>";
+        }
+//        out.println(output);
+
     %>
      <script type="text/javascript">
            jQuery(document).ready(function() {
-               <%if(counter>0){%>
-            jQuery("#errors").html('<%=output%>');
-            <%}if(uploaded>0 ){%>
-            jQuery("#uploaded").html('<%=files_uploaded%>');
-            <%}%>
+           jQuery("#response").html('<%=output%>');
+           
             });
     </script>
     <% 
-        session.removeAttribute("upload_errors");
+//        session.removeAttribute("upload_errors");
         }
     %>
     
