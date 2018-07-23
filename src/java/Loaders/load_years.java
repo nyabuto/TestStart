@@ -3,10 +3,14 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package Db;
+package Loaders;
 
+import Db.dbConn;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.sql.SQLException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -17,16 +21,30 @@ import javax.servlet.http.HttpSession;
  *
  * @author GNyabuto
  */
-public class logout extends HttpServlet {
-    HttpSession session;
+public class load_years extends HttpServlet {
+HttpSession session;
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
+            throws ServletException, IOException, SQLException {
         response.setContentType("text/html;charset=UTF-8");
         try (PrintWriter out = response.getWriter()) {
-            session = request.getSession();
-           
-           session.invalidate();
-           response.sendRedirect("../TestStart");
+         String  output = "";
+           session = request.getSession();
+           dbConn conn = new dbConn();
+            
+            output+="<option value=\"\">Choose Year</option>";
+            
+            String getyears = ""
+                    + "SELECT DISTINCT(year)AS year FROM (SELECT year FROM accounting_for_linkage GROUP BY year "
+                    + "UNION "
+                    + "SELECT year FROM art_current_net_loss GROUP BY year "
+                    + "UNION "
+                    + "SELECT year FROM test_start_summary GROUP BY year) AS year_data GROUP BY year ";
+         
+            conn.rs = conn.st.executeQuery(getyears);
+            while(conn.rs.next()){
+                output+="<option value=\""+conn.rs.getString(1)+"\">"+conn.rs.getString(1)+"</option>";
+            }
+            out.println(output);
         }
     }
 
@@ -42,7 +60,11 @@ public class logout extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+    try {
         processRequest(request, response);
+    } catch (SQLException ex) {
+        Logger.getLogger(load_years.class.getName()).log(Level.SEVERE, null, ex);
+    }
     }
 
     /**
@@ -56,7 +78,11 @@ public class logout extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+    try {
         processRequest(request, response);
+    } catch (SQLException ex) {
+        Logger.getLogger(load_years.class.getName()).log(Level.SEVERE, null, ex);
+    }
     }
 
     /**

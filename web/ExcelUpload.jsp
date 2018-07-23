@@ -63,7 +63,7 @@
                          <div class="card-body card-block"> 
                           <div class="row form-group">
                             <div class="col col-md-3"><label for="file-multiple-input" class=" form-control-label">Select Excel files to upload</label></div>
-                            <div class="col-12 col-md-6"><input type="file" id="file" name="file" multiple="" class="form-control-file"></div>
+                            <div class="col-12 col-md-6"><input type="file" id="file" name="file" multiple="" class="form-control-file" required=""></div>
                           </div>
                     
                       </div>
@@ -108,9 +108,18 @@
 
     <%if(session.getAttribute("upload_errors")!=null){
       String output="";
+        JSONArray finalarray = new JSONArray();
+        finalarray = (JSONArray)session.getAttribute("upload_errors");
+        for(int j=0;j<finalarray.size();j++){
+           JSONObject obj_data =  (JSONObject)finalarray.get(j);
+           String filename = obj_data.get("file_name").toString();
+           
+           output += "<div style=\"font-size:20px; text-decoration: underline; font-weight: 900;\"><br><br>File "+(j+1)+". "+filename+"<br></div>";
         JSONArray jarray = new JSONArray();
-        jarray = (JSONArray)session.getAttribute("upload_errors");
-        for(int i=0;i<3;i++){
+       
+        jarray = (JSONArray)obj_data.get("upload_info");
+         if(jarray.size()>0){
+        for(int i=0;i<jarray.size();i++){
             output += "<div>";
             JSONObject objdata = new JSONObject();
             objdata =  (JSONObject)jarray.get(i);
@@ -122,20 +131,36 @@
                 output+="<div style=\"font-size:20px;\"><b>"+sheetname+"</b><br><font color=\"red\">"+error+"</font><br></div>";
             }
             else{
-                String added = objdata.get("added").toString();
-                String skipped_details =objdata.get("skipped_details").toString();
-                int skipped =  Integer.parseInt(objdata.get("skipped").toString());
-                String sheetname =  objdata.get("sheetname").toString();
+                String added="",skipped_details="",sheetname="";
+                int skipped=0;
+                if(objdata.containsKey("added")){
+                added = objdata.get("added").toString();
+                }
+                if(objdata.containsKey("skipped_details")){
+                skipped_details =objdata.get("skipped_details").toString();
+                    }
+                if(objdata.containsKey("skipped")){
+                skipped =  Integer.parseInt(objdata.get("skipped").toString());
+                 }
+                if(objdata.containsKey("sheetname")){
+                sheetname =  objdata.get("sheetname").toString();
+                }
 //                out.println(sheetname);
 //                String sheetname =  "";
                 
-                output+="<div style=\"font-size:20px;\"><b>"+sheetname+"</b><br><font color=\"blue\">"+added+" records added</font> and <font color=\"red\">"+skipped+" records skipped:</font><br></div>";
+                output+="<div style=\"font-size:20px;\"><br><b>"+sheetname+"</b><br><font color=\"blue\">"+added+" records added</font> and <font color=\"red\">"+skipped+" records skipped:</font><br></div>";
                 if(skipped>0){
                 output+="<table class=\"table\" style=\"font-size:12px;\">"+skipped_details+"</table>";
                 }
             }
-            output+="</div>";
+            output+="</div></div>";
         }
+       }
+         else{
+             output +="Nothing to display";
+         }
+    }
+    
 //        out.println(output);
 
     %>
@@ -146,7 +171,7 @@
             });
     </script>
     <% 
-//        session.removeAttribute("upload_errors");
+        session.removeAttribute("upload_errors");
         }
     %>
     
