@@ -12,7 +12,7 @@
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Upload Excel Data</title>
+    <title>Test&Start Data</title>
     <meta name="description" content="Sufee Admin - HTML5 Admin Template">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -56,7 +56,7 @@
                   <div class="col-lg-12">
                     <div class="card">
                       <div class="card-header">
-                        <strong>Data Upload Module</strong>
+                        <strong>Test&Start Data Upload Module</strong>
                       </div>
                       
                         <form action="UploadExcels" method="post" enctype="multipart/form-data" class="form-horizontal">

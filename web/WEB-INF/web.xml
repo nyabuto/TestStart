@@ -48,6 +48,10 @@
         <servlet-name>load_quarter</servlet-name>
         <servlet-class>Loaders.load_quarter</servlet-class>
     </servlet>
+    <servlet>
+        <servlet-name>UploadTXCURR</servlet-name>
+        <servlet-class>TestStart.UploadTXCURR</servlet-class>
+    </servlet>
     <servlet-mapping>
         <servlet-name>login</servlet-name>
         <url-pattern>/login</url-pattern>
@@ -95,6 +99,10 @@
     <servlet-mapping>
         <servlet-name>load_quarter</servlet-name>
         <url-pattern>/load_quarter</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>UploadTXCURR</servlet-name>
+        <url-pattern>/UploadTXCURR</url-pattern>
     </servlet-mapping>
     <session-config>
         <session-timeout>

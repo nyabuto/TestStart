@@ -10,7 +10,7 @@
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Test & Start</title>
+    <title>Excel Uploads</title>
     <meta name="description" content="Sufee Admin - HTML5 Admin Template">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -60,7 +60,7 @@
                                                         
                                                           <div class="form-group">
                                                                 <label><b>Database: </b></label>
-                                                                <input id="database"  type=text required name="database" value="test_start"  class="form-control" placeholder="test and start system">
+                                                                <input id="database"  type=text required name="database" value="excels"  class="form-control" placeholder="test and start system">
                                                             </div>
                                                         
                                                         

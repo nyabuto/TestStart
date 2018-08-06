@@ -10,7 +10,7 @@
     <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Test and Start System</title>
+    <title>HSDSA Excel Upload System</title>
     <meta name="description" content="Sufee Admin - HTML5 Admin Template">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -41,7 +41,7 @@
     
     <div class="sufee-login d-flex align-content-center flex-wrap" style="margin-top: 7%;">
         <div class="container">
-            <div class="form-group login-logo">Test & Start Upload Module</div>
+            <div class="form-group login-logo">HSDSA Excel Upload System</div>
             <div class="login-content" style="margin-top: 3%;">
                  
                 <div class="login-form" style="margin-top: 10%;">

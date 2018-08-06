@@ -123,10 +123,14 @@ public  Connection conn = null;
 
         try {
 
-
-
-            String dbconnpath = drive + ":/HSDSA/TestStart/DO_NOT_DELETE/_/_/./dbconnection.txt";
-
+             String dbconnpath = "";
+             if(OSValidator.isWindows()){
+            dbconnpath = drive + ":/HSDSA/ExcelUploads/DO_NOT_DELETE/_/_/./dbconnection.txt";
+             }
+             
+             else if(OSValidator.isUnix()){
+            dbconnpath = "/HSDSA/ExcelUploads/DO_NOT_DELETE/_/_/./dbconnection.txt";
+             }
             //File file = new File("");
             // InputStream inStream = getClass().getResourceAsStream("Web-INF/classes/dbconnection.txt");  
             FileInputStream fstream = new FileInputStream(dbconnpath);

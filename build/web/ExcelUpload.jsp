@@ -12,7 +12,7 @@
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Upload Excel Data</title>
+    <title>Test&Start Data</title>
     <meta name="description" content="Sufee Admin - HTML5 Admin Template">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -56,14 +56,14 @@
                   <div class="col-lg-12">
                     <div class="card">
                       <div class="card-header">
-                        <strong>Data Upload Module</strong>
+                        <strong>Test&Start Data Upload Module</strong>
                       </div>
                       
                         <form action="UploadExcels" method="post" enctype="multipart/form-data" class="form-horizontal">
                          <div class="card-body card-block"> 
                           <div class="row form-group">
                             <div class="col col-md-3"><label for="file-multiple-input" class=" form-control-label">Select Excel files to upload</label></div>
-                            <div class="col-12 col-md-6"><input type="file" id="file" name="file" multiple="" class="form-control-file"></div>
+                            <div class="col-12 col-md-6"><input type="file" id="file" name="file" multiple="" class="form-control-file" required=""></div>
                           </div>
                     
                       </div>
@@ -80,9 +80,9 @@
                             </form>
                     </div>
                   </div>
-                    <div style="margin-left: 15%;">
-                    <div id="uploaded" class="thead-light" style="text-align: center;">
-                    <!--uploaded-->
+                    <div style="margin-left: 2%;">
+                    <div id="response" class="thead-light" style="text-align: center;">
+                    <!--upload response-->
                     </div>
                     <br>
                     <div id="errors" class="thead-light">
@@ -107,38 +107,67 @@
 
 
     <%if(session.getAttribute("upload_errors")!=null){
-        int uploaded=0; 
-        JSONObject finalobj = new JSONObject();
+      String output="";
+        JSONArray finalarray = new JSONArray();
+        finalarray = (JSONArray)session.getAttribute("upload_errors");
+        for(int j=0;j<finalarray.size();j++){
+           JSONObject obj_data =  (JSONObject)finalarray.get(j);
+           String filename = obj_data.get("file_name").toString();
+           
+           output += "<div style=\"font-size:20px; text-decoration: underline; font-weight: 900;\"><br><br>File "+(j+1)+". "+filename+"<br></div>";
         JSONArray jarray = new JSONArray();
-        finalobj = (JSONObject)session.getAttribute("upload_errors");
-//        out.println(finalobj);
-        jarray = (JSONArray)finalobj.get("data");
-        uploaded = (Integer)finalobj.get("uploaded");
-        out.println(uploaded);
-//        out.println(jarray);
-String files_uploaded = "<b style=\"color:red;\">"+uploaded+"</b> <b style=\"color:black;\">Files added/updated successfully.</b>";
-        String output="<div style=\"font-weight:900; text-align:center;\">The following files were not uploaded:</div><br>"
-                + "<table  class=\"table\"><thead class=\"thead-dark\">"
-                + "<tr><th>No.</th><th>File Name</th><th>Error Description</th></tr></thead><tbody>";
-        int counter=0;
-            for(int i=0;i<jarray.size();i++) {
-                counter++;
-                JSONObject obj = (JSONObject)jarray.get(i);
-//                out.println(obj);
-               String description = obj.get("description").toString();
-               String file_name =  obj.get("file_name").toString();
-               
-              output+="<tr><td>"+(i+1)+"</td><td>"+file_name+"</td><td>"+description+"</td></tr>"; 
+       
+        jarray = (JSONArray)obj_data.get("upload_info");
+         if(jarray.size()>0){
+        for(int i=0;i<jarray.size();i++){
+            output += "<div>";
+            JSONObject objdata = new JSONObject();
+            objdata =  (JSONObject)jarray.get(i);
+            if(objdata.containsKey("period_error")){
+                //show upload error missing year or month
+                String error = objdata.get("period_error").toString();
+                String sheetname =  objdata.get("sheetname").toString();
+                out.println(sheetname);
+                output+="<div style=\"font-size:20px;\"><b>"+sheetname+"</b><br><font color=\"red\">"+error+"</font><br></div>";
             }
-        output+="</tbody></table>";
+            else{
+                String added="",skipped_details="",sheetname="";
+                int skipped=0;
+                if(objdata.containsKey("added")){
+                added = objdata.get("added").toString();
+                }
+                if(objdata.containsKey("skipped_details")){
+                skipped_details =objdata.get("skipped_details").toString();
+                    }
+                if(objdata.containsKey("skipped")){
+                skipped =  Integer.parseInt(objdata.get("skipped").toString());
+                 }
+                if(objdata.containsKey("sheetname")){
+                sheetname =  objdata.get("sheetname").toString();
+                }
+//                out.println(sheetname);
+//                String sheetname =  "";
+                
+                output+="<div style=\"font-size:20px;\"><br><b>"+sheetname+"</b><br><font color=\"blue\">"+added+" records added</font> and <font color=\"red\">"+skipped+" records skipped:</font><br></div>";
+                if(skipped>0){
+                output+="<table class=\"table\" style=\"font-size:12px;\">"+skipped_details+"</table>";
+                }
+            }
+            output+="</div></div>";
+        }
+       }
+         else{
+             output +="Nothing to display";
+         }
+    }
+    
+//        out.println(output);
+
     %>
      <script type="text/javascript">
            jQuery(document).ready(function() {
-               <%if(counter>0){%>
-            jQuery("#errors").html('<%=output%>');
-            <%}if(uploaded>0 ){%>
-            jQuery("#uploaded").html('<%=files_uploaded%>');
-            <%}%>
+           jQuery("#response").html('<%=output%>');
+           
             });
     </script>
     <% 

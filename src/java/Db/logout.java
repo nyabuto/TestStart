@@ -26,7 +26,7 @@ public class logout extends HttpServlet {
             session = request.getSession();
            
            session.invalidate();
-           response.sendRedirect("../TestStart");
+           response.sendRedirect("../ExcelUploads");
         }
     }
 

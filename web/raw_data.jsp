@@ -12,7 +12,7 @@
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Raw Data Report</title>
+    <title>Test&Start Raw Data Report</title>
     <meta name="description" content="Sufee Admin - HTML5 Admin Template">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -56,7 +56,7 @@
                   <div class="col-lg-12">
                     <div class="card">
                       <div class="card-header">
-                        <strong>Generate Raw Data Report</strong>
+                        <strong>Generate Test&Start Raw Data Report</strong>
                       </div>
                       
                         <form action="RawData" method="post" class="form-horizontal">
