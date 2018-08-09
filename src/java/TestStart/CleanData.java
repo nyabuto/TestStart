@@ -3,11 +3,10 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package Loaders;
+package TestStart;
 
 import Db.dbConn;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -15,30 +14,35 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
 /**
  *
  * @author GNyabuto
  */
-public class load_counties extends HttpServlet {
-HttpSession session;
-String output="";
+public class CleanData extends HttpServlet {
+
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException, SQLException {
-        response.setContentType("text/html;charset=UTF-8");
-        try (PrintWriter out = response.getWriter()) {
-           dbConn conn = new dbConn();
-           
-            output="<option value=\"\">Choose County</option>";
+            throws ServletException, IOException,SQLException {
+        dbConn conn = new dbConn();
+        UploadTXCURR upload = new UploadTXCURR();
+       
+        String getdata = "SELECT id, month_due_vl FROM tx_curr";
+        conn.rs = conn.st.executeQuery(getdata);
+        while(conn.rs.next()){
+            String id = conn.rs.getString(1);
+            String month=conn.rs.getString(2);
+            if(upload.isNumeric(month)){
+            String new_month = upload.numbertomonth(month);
             
-           String getCounties = "SELECT CountyID,County FROM county ORDER BY County";
-           conn.rs = conn.st.executeQuery(getCounties);
-           while(conn.rs.next()){
-               output+="<option value=\""+conn.rs.getString(1)+"\">"+conn.rs.getString(2)+"</option>";
-           }
-            
-            out.println(output);
+            String updatemonth = "UPDATE tx_curr SET month_due_vl=? WHERE id=?";
+            conn.pst = conn.conn.prepareStatement(updatemonth);
+            conn.pst.setString(1, new_month);
+            conn.pst.setString(2, id);
+            conn.pst.executeUpdate();
+            }
+            else{
+               // System.out.println("month: "+month+" is non numeric");
+            }
         }
     }
 
@@ -54,11 +58,11 @@ String output="";
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-    try {
-        processRequest(request, response);
-    } catch (SQLException ex) {
-        Logger.getLogger(load_counties.class.getName()).log(Level.SEVERE, null, ex);
-    }
+        try {
+            processRequest(request, response);
+        } catch (SQLException ex) {
+            Logger.getLogger(CleanData.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     /**
@@ -72,11 +76,11 @@ String output="";
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-    try {
-        processRequest(request, response);
-    } catch (SQLException ex) {
-        Logger.getLogger(load_counties.class.getName()).log(Level.SEVERE, null, ex);
-    }
+        try {
+            processRequest(request, response);
+        }  catch (SQLException ex) {
+            Logger.getLogger(CleanData.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     /**

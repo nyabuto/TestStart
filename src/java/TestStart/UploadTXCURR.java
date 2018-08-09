@@ -192,7 +192,7 @@ boolean exist = false;
         
         
     public String readSheet (Sheet worksheet, dbConn conn) throws SQLException{
-        
+        int updated=0;
         String mflcode=""; //12
         String id,serialNo,review_date,ccc_no,is_ti,oct_17,nov_17,dec_17,jan_18,feb_18,mar_18,apr_18,may_18,jun_18,jul_18,month_due_vl;
 String header="";
@@ -242,7 +242,8 @@ String header="";
 //        System.out.println("Formula is " + cellmfl.getCellFormula());
         switch(cellmfl.getCachedFormulaResultType()) {
             case Cell.CELL_TYPE_NUMERIC:
-                mflcode =""+(int) cellmfl.getNumericCellValue();
+                cellmfl.setCellType(Cell.CELL_TYPE_STRING);
+                mflcode   =  cellmfl.getStringCellValue();
                 break;
             case Cell.CELL_TYPE_STRING:
               mflcode   =  cellmfl.getStringCellValue();
@@ -251,7 +252,8 @@ String header="";
      }
   System.out.println("mfl code :"+mflcode);
     if(facilityExist(conn, mflcode)){ //check if facility exist...
-        int i=7,y=0,skipped_records=0,added_records=0;
+        int i=7,y=0,skipped_records=0,added_records=updated=0;
+        String exi_ccc_no="";
         while(rowIterator.hasNext()){
             id=serialNo=review_date=ccc_no=is_ti=oct_17=nov_17=dec_17=jan_18=feb_18=mar_18=apr_18=may_18=jun_18=jul_18=month_due_vl="";
             error_details = "";
@@ -323,7 +325,8 @@ String header="";
             switch (cell2.getCellType()) {
                    case 0:
                        //numeric
-                       ccc_no =""+(int)cell2.getNumericCellValue();
+                       cell2.setCellType(Cell.CELL_TYPE_STRING);
+                       ccc_no = cell2.getStringCellValue();
                        break;
                    case 1:
                        //string
@@ -630,33 +633,34 @@ String header="";
             id = mflcode+"_"+ccc_no;
         }
         
-        
+            System.out.println("id is :"+id);
+            
         //check on dead cases
-        if(oct_17.equals("Dead")){
+        if(oct_17.equalsIgnoreCase("Dead")){
             nov_17 = dec_17 = jan_18 = feb_18 = mar_18 = apr_18 = may_18 = jun_18 = jul_18 = "";
         }
-        else if(nov_17.equals("Dead")){
+        else if(nov_17.equalsIgnoreCase("Dead")){
          dec_17 = jan_18 = feb_18 = mar_18 = apr_18 = may_18 = jun_18 = jul_18 = "";
         }
-        else if(dec_17.equals("Dead")){
+        else if(dec_17.equalsIgnoreCase("Dead")){
          jan_18 = feb_18 = mar_18 = apr_18 = may_18 = jun_18 = jul_18 = "";
         }
-        else if(jan_18.equals("Dead")){
+        else if(jan_18.equalsIgnoreCase("Dead")){
          feb_18 = mar_18 = apr_18 = may_18 = jun_18 = jul_18 = "";
         }
-        else if(feb_18.equals("Dead")){
+        else if(feb_18.equalsIgnoreCase("Dead")){
          mar_18 = apr_18 = may_18 = jun_18 = jul_18 = "";
         }
-        else if(mar_18.equals("Dead")){
+        else if(mar_18.equalsIgnoreCase("Dead")){
          apr_18 = may_18 = jun_18 = jul_18 = "";
         }
-        else if(apr_18.equals("Dead")){
+        else if(apr_18.equalsIgnoreCase("Dead")){
          may_18 = jun_18 = jul_18 = "";
         }
-        else if(may_18.equals("Dead")){
+        else if(may_18.equalsIgnoreCase("Dead")){
          jun_18 = jul_18 = "";
         }
-        else if(jun_18.equals("Dead")){
+        else if(jun_18.equalsIgnoreCase("Dead")){
          jul_18 = "";
         }
        
@@ -667,6 +671,42 @@ String header="";
       skipped_records++;
     }
     else{
+        
+        if(isNumeric(month_due_vl)){
+            month_due_vl =numbertomonth(month_due_vl);
+        }
+        
+        String checker = "SELECT id FROM tx_curr WHERE id='"+id+"'";
+        System.out.println("checker:"+checker);
+        conn.rs = conn.st.executeQuery(checker);
+        if(conn.rs.next()){
+            updated++;
+            exi_ccc_no+=updated+". "+ccc_no+" <br>";
+            String query = "REPLACE INTO tx_curr SET id=?,mflcode=?,serialNo=?,review_date=?,ccc_no=?,is_ti=?,oct_17=?,nov_17=?,dec_17=?,jan_18=?,feb_18=?,mar_18=?,apr_18=?,may_18=?,jun_18=?,jul_18=?,month_due_vl=?";
+                conn.pst = conn.conn.prepareStatement(query);
+                conn.pst.setString(1, id);
+                conn.pst.setString(2, mflcode);
+                conn.pst.setString(3, serialNo);
+                conn.pst.setString(4, review_date);
+                conn.pst.setString(5, ccc_no);
+                conn.pst.setString(6, is_ti);
+                conn.pst.setString(7, oct_17);
+                conn.pst.setString(8, nov_17);
+                conn.pst.setString(9, dec_17);
+                conn.pst.setString(10, jan_18);
+                conn.pst.setString(11, feb_18);
+                conn.pst.setString(12, mar_18);
+                conn.pst.setString(13, apr_18);
+                conn.pst.setString(14, may_18);
+                conn.pst.setString(15, jun_18);
+                conn.pst.setString(16, jul_18);
+                conn.pst.setString(17, month_due_vl);
+                conn.pst.executeUpdate();
+            
+                conn.pst.executeUpdate();
+        }
+        else{
+        
                added_records++;
                String query = "REPLACE INTO tx_curr SET id=?,mflcode=?,serialNo=?,review_date=?,ccc_no=?,is_ti=?,oct_17=?,nov_17=?,dec_17=?,jan_18=?,feb_18=?,mar_18=?,apr_18=?,may_18=?,jun_18=?,jul_18=?,month_due_vl=?";
                 conn.pst = conn.conn.prepareStatement(query);
@@ -690,15 +730,20 @@ String header="";
                 conn.pst.executeUpdate();
             
                 conn.pst.executeUpdate();
-            
+        }
             }
     
     i++;
         }
         
         if(skipped_records>0){
-                  output+="<b><u>"+added_records+"</u> Records added/updated successfully.</b><br>"
-                          + "<font color=\"red\"><b>Record not Added</b></font></br>"
+                  output+="<b><u>"+added_records+"</u> Records added successfully.<br> </b>";
+                  if(updated>0){
+                  output+="<b>"+updated+" possible duplicates detected.<br> List of duplicated CCC Numbers: <br>"+exi_ccc_no+"</b><br>";
+                  }     
+                  
+                  
+                  output+="<font color=\"red\"><b>Record not Added</b></font></br>"
                           + "<table  class=\"table\" style=\"font-size:12px;\">"
                           + "<thead class=\"thead-dark\">"
                           + "<tr>"
@@ -724,7 +769,10 @@ String header="";
                           + ""+all_error_details+"</tbody></table>";
         }
         else{
-         output+="<b><font color=\"blue\">"+added_records+"</u> Records added/updated successfully.</b></font><br>";    
+         output+="<b><font color=\"blue\">"+added_records+"</u> Records added successfully.<br></font></b>";
+         if(updated>0){
+         output+="<b><font color=\"blue\">"+updated+" possible duplicates detected.<br> List of duplicated CCC Numbers: <br>"+exi_ccc_no+"</b></font><br>";
+         }
         }
         }
          else {
@@ -741,5 +789,54 @@ output+="<font color=\"red\"><b>This is not a HSDSA ART Supported site. Provided
   output+="<font color=\"red\"><b>Wrong Excel Version. Kindly use Excel version v1.0 shown on your header as <u>Tx_ Curr Daily Data Verification Sheet v1.0</u></b></font><br>";        
  }
      return all_error_details;
+    }
+    
+    public String numbertomonth(String month_num){
+        String month_vl = ""; 
+   int month = Integer.parseInt(month_num);
+        if(month>=43040 && month<=43069){
+          month_vl = "Nov-17";  
+        }
+        else if(month>=43070 && month<=43100){
+         month_vl = "Dec-17";      
+        }
+        else if(month>=43101 && month<=43131){
+         month_vl = "Jan-18";      
+        }
+        else if(month>=43132 && month<=43159){
+         month_vl = "Feb-18";      
+        }
+        else if(month>=43160 && month<=43190){
+         month_vl = "Mar-18";      
+        }
+        else if(month>=43191 && month<=43220){
+         month_vl = "Apr-18";      
+        }
+        else if(month>=43221 && month<=43251){
+         month_vl = "May-18";      
+        }
+        else if(month>=43252 && month<=43281){
+         month_vl = "Jun-18";      
+        }
+        else if(month>=43282 && month<=43312){
+         month_vl = "Jul-18";      
+        }
+        else if(month>=43313 && month<=43343){
+         month_vl = "Aug-18";      
+        }
+        else if(month>=43344 && month<=43373){
+         month_vl = "Sep-18";      
+        }
+        else if(month>=43374 && month<=43404){
+         month_vl = "Oct-18";      
+        }
+        
+        System.out.println("Numeric month : "+month_num+" converted to "+month_vl);
+        return month_vl;
+    }
+    
+        
+    public boolean isNumeric(String s) {  
+        return s != null && s.matches("[-+]?\\d*\\.?\\d+");  
     }
 }
