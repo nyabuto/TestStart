@@ -42,7 +42,7 @@
     <div id="right-panel" class="right-panel">
 
         <!-- Header-->
-       <%@include file="header.jsp" %>
+       <%@include file="header2.jsp" %>
         <!-- Header-->
 
         <div class="content mt-3">

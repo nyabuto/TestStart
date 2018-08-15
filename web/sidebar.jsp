@@ -52,9 +52,9 @@
                 <ul class="nav navbar-nav">
                  
                     <h3 class="menu-title" style="text-align: center; font-size: 130%;">Modules</h3><!-- /.menu-title -->
-<!--                    <li>
-                     <a href="Dashboard.jsp"> <i class="menu-icon fa fa-dashboard"></i>Dashboard </a>
-                    </li>-->
+                    <li>
+                     <a href="DashCurrRRI.jsp"> <i class="menu-icon fa fa-dashboard"></i>Dashboard </a>
+                    </li>
                    <li class="menu-item-has-children active dropdown">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> <i class="menu-icon fa fa-upload"></i>Upload Data</a>
                         <ul class="sub-menu children dropdown-menu">

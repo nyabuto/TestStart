@@ -57,7 +57,9 @@ int has_data;
            while(conn.rs.next()){
                output+="<option value=\""+conn.rs.getString(1)+"\">"+conn.rs.getString(2)+"</option>";
            }
-            
+conn.rs.close();
+conn.st.close(); 
+
             out.println(output);
         }
     }

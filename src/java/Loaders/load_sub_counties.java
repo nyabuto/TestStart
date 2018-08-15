@@ -61,6 +61,9 @@ int has_data=0;
                output+="<option value=\""+conn.rs.getString(1)+"\">"+conn.rs.getString(2)+"</option>";
            }
             System.out.println(output);
+            
+conn.rs.close();
+conn.st.close(); 
             out.println(output);
         }
     }

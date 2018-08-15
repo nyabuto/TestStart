@@ -64,12 +64,12 @@ String columns[] = {"A","B","C","D","E","F","G","H","I","J","K","L","M","N","O",
                 where="";    
                 }
                 else{
-                   String[] county_data = request.getParameter("county").split("_"); 
+                   String[] county_data = request.getParameterValues("county"); 
                    where = " WHERE (";
                     has_data=0;
                     for(String ct:county_data){
                      if(ct!=null && !ct.equals("")){
-                      where+="county.CountyID='"+ct+"' OR ";
+                      where+="CountyID='"+ct+"' OR ";
                       has_data++;
                      }  
                     }
@@ -87,12 +87,13 @@ String columns[] = {"A","B","C","D","E","F","G","H","I","J","K","L","M","N","O",
                 
             }
             else{
-            String[] sub_county_data = request.getParameter("sub_county").split("_");
+                System.out.println("subcounty : "+request.getParameter("sub_county"));
+            String[] sub_county_data = request.getParameterValues("sub_county");
                where = " WHERE (";
            has_data=0;
            for(String sct:sub_county_data){
             if(sct!=null && !sct.equals("")){
-             where+="district.DistrictID='"+sct+"' OR ";
+             where+="SubCountyID='"+sct+"' OR ";
              has_data++;
             }  
            }
@@ -104,17 +105,17 @@ String columns[] = {"A","B","C","D","E","F","G","H","I","J","K","L","M","N","O",
            else{
             where = " ";   
            } 
-                
+                System.out.println(has_data+" where : "+where);    
               // where = " WHERE district.DistrictID='"+sub_county+"' ";    
             }
         }
         else{
-         String[] facility_data = request.getParameter("facility").split("_");   
+         String[] facility_data = request.getParameterValues("facility");   
             where = " WHERE (";
            has_data=0;
            for(String fac:facility_data){
             if(fac!=null && !fac.equals("")){
-             where+="subpartnera.SubpartnerID='"+fac+"' OR ";
+             where+="SubpartnerID='"+fac+"' OR ";
              has_data++;
             }  
            }
@@ -137,7 +138,7 @@ String columns[] = {"A","B","C","D","E","F","G","H","I","J","K","L","M","N","O",
     XSSFSheet shet2=wb.createSheet("Sub County Summary");
     XSSFSheet shet3=wb.createSheet("County Summary");
     XSSFSheet shet4=wb.createSheet("Due for Viral Load");
-    XSSFSheet shet5=wb.createSheet("Summary By Status");
+    XSSFSheet shet5=wb.createSheet("Project Summary By Status");
      XSSFFont font=wb.createFont();
     font.setFontHeightInPoints((short)18);
     font.setFontName("Cambria");
@@ -161,6 +162,24 @@ String columns[] = {"A","B","C","D","E","F","G","H","I","J","K","L","M","N","O",
     styleHeader.setBorderLeft(BorderStyle.THIN);
     styleHeader.setBorderRight(BorderStyle.THIN);
     styleHeader.setAlignment(HorizontalAlignment.CENTER);
+    
+    XSSFCellStyle styleRed = wb.createCellStyle();
+    styleRed.setFillForegroundColor(HSSFColor.RED.index);
+    styleRed.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+    styleRed.setBorderTop(BorderStyle.THIN);
+    styleRed.setBorderBottom(BorderStyle.THIN);
+    styleRed.setBorderLeft(BorderStyle.THIN);
+    styleRed.setBorderRight(BorderStyle.THIN);
+    styleRed.setAlignment(HorizontalAlignment.CENTER);
+    
+    XSSFCellStyle styleGreen = wb.createCellStyle();
+    styleGreen.setFillForegroundColor(HSSFColor.GREEN.index);
+    styleGreen.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+    styleGreen.setBorderTop(BorderStyle.THIN);
+    styleGreen.setBorderBottom(BorderStyle.THIN);
+    styleGreen.setBorderLeft(BorderStyle.THIN);
+    styleGreen.setBorderRight(BorderStyle.THIN);
+    styleGreen.setAlignment(HorizontalAlignment.CENTER);
     
     XSSFCellStyle styleTotal = wb.createCellStyle();
     styleTotal.setFillForegroundColor(HSSFColor.GREY_25_PERCENT.index);
@@ -210,117 +229,22 @@ String columns[] = {"A","B","C","D","E","F","G","H","I","J","K","L","M","N","O",
     
     
        
-      facil_data = "/*Facility summaries */ " +
-                    " " +
-                    "SELECT county.County AS 'County Name', district.DistrictNom AS 'Sub County', subpartnera.SubPartnerNom AS 'Health Facility',CentreSanteId AS MFLCode, " +
-"COUNT(CASE WHEN tx_curr.oct_17='Active' then 1 END) AS 'Active', " +
-"COUNT(CASE WHEN tx_curr.oct_17='Defaulters' OR tx_curr.oct_17='Defaulter' then 1 END) AS 'Defaulter', " +
-"COUNT(CASE WHEN tx_curr.oct_17='T.O' OR tx_curr.oct_17='TO' then 1 END) AS 'T.O', " +
-"COUNT(CASE WHEN tx_curr.oct_17='LTFU' then 1 END) AS 'LTFU', " +
-"COUNT(CASE WHEN tx_curr.oct_17='Dead' then 1 END) AS 'Dead', " +
-"COUNT(CASE WHEN tx_curr.oct_17='Stopped ' then 1 END) AS 'Stopped', " +
-"COUNT(CASE WHEN tx_curr.oct_17='Pending verification' then 1 END) AS 'Pending verification', " +
-"COUNT(CASE WHEN tx_curr.oct_17!='' then 1 END) AS 'Total', " +
-" " +
-"COUNT(CASE WHEN tx_curr.nov_17='Active' then 1 END) AS 'Active', " +
-"COUNT(CASE WHEN tx_curr.nov_17='Defaulters' OR tx_curr.nov_17='Defaulter' then 1 END) AS 'Defaulter', " +
-"COUNT(CASE WHEN tx_curr.nov_17='T.O' OR tx_curr.nov_17='TO' then 1 END) AS 'T.O', " +
-"COUNT(CASE WHEN tx_curr.nov_17='LTFU' then 1 END) AS 'LTFU', " +
-"COUNT(CASE WHEN tx_curr.nov_17='Dead' then 1 END) AS 'Dead', " +
-"COUNT(CASE WHEN tx_curr.nov_17='Stopped ' then 1 END) AS 'Stopped', " +
-"COUNT(CASE WHEN tx_curr.nov_17='Pending verification' then 1 END) AS 'Pending verification', " +
-"COUNT(CASE WHEN tx_curr.nov_17!='' then 1 END) AS 'Total', " +
-" " +
-"COUNT(CASE WHEN tx_curr.dec_17='Active' then 1 END) AS 'Active', " +
-"COUNT(CASE WHEN tx_curr.dec_17='Defaulters' OR tx_curr.dec_17='Defaulter' then 1 END) AS 'Defaulter', " +
-"COUNT(CASE WHEN tx_curr.dec_17='T.O' OR tx_curr.dec_17='TO' then 1 END) AS 'T.O', " +
-"COUNT(CASE WHEN tx_curr.dec_17='LTFU' then 1 END) AS 'LTFU', " +
-"COUNT(CASE WHEN tx_curr.dec_17='Dead' then 1 END) AS 'Dead', " +
-"COUNT(CASE WHEN tx_curr.dec_17='Stopped ' then 1 END) AS 'Stopped', " +
-"COUNT(CASE WHEN tx_curr.dec_17='Pending verification' then 1 END) AS 'Pending verification', " +
-"COUNT(CASE WHEN tx_curr.dec_17!='' then 1 END) AS 'Total', " +
-" " +
-"COUNT(CASE WHEN tx_curr.jan_18='Active' then 1 END) AS 'Active', " +
-"COUNT(CASE WHEN tx_curr.jan_18='Defaulters' OR tx_curr.jan_18='Defaulter' then 1 END) AS 'Defaulter', " +
-"COUNT(CASE WHEN tx_curr.jan_18='T.O' OR tx_curr.jan_18='TO' then 1 END) AS 'T.O', " +
-"COUNT(CASE WHEN tx_curr.jan_18='LTFU' then 1 END) AS 'LTFU', " +
-"COUNT(CASE WHEN tx_curr.jan_18='Dead' then 1 END) AS 'Dead', " +
-"COUNT(CASE WHEN tx_curr.jan_18='Stopped ' then 1 END) AS 'Stopped', " +
-"COUNT(CASE WHEN tx_curr.jan_18='Pending verification' then 1 END) AS 'Pending verification', " +
-"COUNT(CASE WHEN tx_curr.jan_18!='' then 1 END) AS 'Total', " +
-" " +
-"COUNT(CASE WHEN tx_curr.feb_18='Active' then 1 END) AS 'Active', " +
-"COUNT(CASE WHEN tx_curr.feb_18='Defaulters' OR tx_curr.feb_18='Defaulter' then 1 END) AS 'Defaulter', " +
-"COUNT(CASE WHEN tx_curr.feb_18='T.O' OR tx_curr.feb_18='TO' then 1 END) AS 'T.O', " +
-"COUNT(CASE WHEN tx_curr.feb_18='LTFU' then 1 END) AS 'LTFU', " +
-"COUNT(CASE WHEN tx_curr.feb_18='Dead' then 1 END) AS 'Dead', " +
-"COUNT(CASE WHEN tx_curr.feb_18='Stopped ' then 1 END) AS 'Stopped', " +
-"COUNT(CASE WHEN tx_curr.feb_18='Pending verification' then 1 END) AS 'Pending verification', " +
-"COUNT(CASE WHEN tx_curr.feb_18!='' then 1 END) AS 'Total', " +
-" " +
-"COUNT(CASE WHEN tx_curr.mar_18='Active' then 1 END) AS 'Active', " +
-"COUNT(CASE WHEN tx_curr.mar_18='Defaulters' OR tx_curr.mar_18='Defaulter' then 1 END) AS 'Defaulter', " +
-"COUNT(CASE WHEN tx_curr.mar_18='T.O' OR tx_curr.mar_18='TO' then 1 END) AS 'T.O', " +
-"COUNT(CASE WHEN tx_curr.mar_18='LTFU' then 1 END) AS 'LTFU', " +
-"COUNT(CASE WHEN tx_curr.mar_18='Dead' then 1 END) AS 'Dead', " +
-"COUNT(CASE WHEN tx_curr.mar_18='Stopped ' then 1 END) AS 'Stopped', " +
-"COUNT(CASE WHEN tx_curr.mar_18='Pending verification' then 1 END) AS 'Pending verification', " +
-"COUNT(CASE WHEN tx_curr.mar_18!='' then 1 END) AS 'Total', " +
-" " +
-"COUNT(CASE WHEN tx_curr.apr_18='Active' then 1 END) AS 'Active', " +
-"COUNT(CASE WHEN tx_curr.apr_18='Defaulters' OR tx_curr.apr_18='Defaulter' then 1 END) AS 'Defaulter', " +
-"COUNT(CASE WHEN tx_curr.apr_18='T.O' OR tx_curr.apr_18='TO' then 1 END) AS 'T.O', " +
-"COUNT(CASE WHEN tx_curr.apr_18='LTFU' then 1 END) AS 'LTFU', " +
-"COUNT(CASE WHEN tx_curr.apr_18='Dead' then 1 END) AS 'Dead', " +
-"COUNT(CASE WHEN tx_curr.apr_18='Stopped ' then 1 END) AS 'Stopped', " +
-"COUNT(CASE WHEN tx_curr.apr_18='Pending verification' then 1 END) AS 'Pending verification', " +
-"COUNT(CASE WHEN tx_curr.apr_18!='' then 1 END) AS 'Total', " +
-" " +
-"COUNT(CASE WHEN tx_curr.may_18='Active' then 1 END) AS 'Active', " +
-"COUNT(CASE WHEN tx_curr.may_18='Defaulters' OR tx_curr.may_18='Defaulter' then 1 END) AS 'Defaulter', " +
-"COUNT(CASE WHEN tx_curr.may_18='T.O' OR tx_curr.may_18='TO' then 1 END) AS 'T.O', " +
-"COUNT(CASE WHEN tx_curr.may_18='LTFU' then 1 END) AS 'LTFU', " +
-"COUNT(CASE WHEN tx_curr.may_18='Dead' then 1 END) AS 'Dead', " +
-"COUNT(CASE WHEN tx_curr.may_18='Stopped ' then 1 END) AS 'Stopped', " +
-"COUNT(CASE WHEN tx_curr.may_18='Pending verification' then 1 END) AS 'Pending verification', " +
-"COUNT(CASE WHEN tx_curr.may_18!='' then 1 END) AS 'Total', " +
-" " +
-"COUNT(CASE WHEN tx_curr.jun_18='Active' then 1 END) AS 'Active', " +
-"COUNT(CASE WHEN tx_curr.jun_18='Defaulters' OR tx_curr.jun_18='Defaulter' then 1 END) AS 'Defaulter', " +
-"COUNT(CASE WHEN tx_curr.jun_18='T.O' OR tx_curr.jun_18='TO' then 1 END) AS 'T.O', " +
-"COUNT(CASE WHEN tx_curr.jun_18='LTFU' then 1 END) AS 'LTFU', " +
-"COUNT(CASE WHEN tx_curr.jun_18='Dead' then 1 END) AS 'Dead', " +
-"COUNT(CASE WHEN tx_curr.jun_18='Stopped ' then 1 END) AS 'Stopped', " +
-"COUNT(CASE WHEN tx_curr.jun_18='Pending verification' then 1 END) AS 'Pending verification', " +
-"COUNT(CASE WHEN tx_curr.jun_18!='' then 1 END) AS 'Total', " +
-" " +
-"COUNT(CASE WHEN tx_curr.jul_18='Active' then 1 END) AS 'Active', " +
-"COUNT(CASE WHEN tx_curr.jul_18='Defaulters' OR tx_curr.jul_18='Defaulter' then 1 END) AS 'Defaulter', " +
-"COUNT(CASE WHEN tx_curr.jul_18='T.O' OR tx_curr.jul_18='TO' then 1 END) AS 'T.O', " +
-"COUNT(CASE WHEN tx_curr.jul_18='LTFU' then 1 END) AS 'LTFU', " +
-"COUNT(CASE WHEN tx_curr.jul_18='Dead' then 1 END) AS 'Dead', " +
-"COUNT(CASE WHEN tx_curr.jul_18='Stopped ' then 1 END) AS 'Stopped', " +
-"COUNT(CASE WHEN tx_curr.jul_18='Pending verification' then 1 END) AS 'Pending verification', " +
-"COUNT(CASE WHEN tx_curr.jul_18!='' then 1 END) AS 'Total' " +
-                    " " +
-                    "from tx_curr LEFT JOIN subpartnera ON tx_curr.mflcode=subpartnera.CentreSanteID  " +
-                    "LEFT JOIN district ON district.DistrictID=subpartnera.DistrictID  " +
-                    "LEFT JOIN county on district.CountyID=county.CountyID "+where+" " +
+      facil_data = "SELECT * FROM rpt_facil_summary "+where+" " +
                     "GROUP BY MFLCode";  
-
+        System.out.println("facil_data:"+facil_data);
       conn.rs = conn.st.executeQuery(facil_data);
       //read headers and post them
       metaData = conn.rs.getMetaData();
-col_count = metaData.getColumnCount(); //number of column
+col_count = metaData.getColumnCount()-3; //number of column
 
 rowheader=shet1.createRow(row_num);
 rowheader.setHeightInPoints(25);
     for(int i=4;i<col_count;i++){ 
     XSSFCell cell= rowheader.createCell(i);
-    int pos = (i-4)/8;
-    if(isEvenlyDivisable(i-4, 8)){
+    int pos = (i-4)/10;
+    if(isEvenlyDivisable(i-4, 10)){
     cell.setCellValue(periods[pos]); 
-     shet1.addMergedRegion(new CellRangeAddress(0,0,i,i+7));
+     shet1.addMergedRegion(new CellRangeAddress(0,0,i,i+9));
     }
     cell.setCellStyle(styleMainHeader);
     }
@@ -332,6 +256,10 @@ rowheader=shet1.createRow(row_num);
 for(int i=1;i<=col_count;i++){
     shet1.setColumnWidth(i-1, 5000);
     String column_name = metaData.getColumnLabel(i);
+    if(column_name.contains("-201")){
+        String[] datalabes = column_name.split("-");
+        column_name = datalabes[0];
+    }
     XSSFCell cell= rowheader.createCell(i-1);
     cell.setCellValue(column_name); 
     cell.setCellStyle(styleHeader);
@@ -349,8 +277,16 @@ row_num++;
                cell.setCellValue(value);    
                }
                
-    if(isEvenlyDivisable(i-4, 8) && i>4){
-      cell.setCellStyle(styleTotal);      
+    if(isEvenlyDivisable(i-4, 10) && i>4){
+        if(value==null){value="0";}
+      if(Integer.parseInt(value)<=0){
+      cell.setCellStyle(styleGreen);  
+        }
+        else{
+        cell.setCellStyle(styleRed);      
+        } 
+      cell = row.getCell(i-3);
+      cell.setCellStyle(styleTotal); 
     }
     else{
    cell.setCellStyle(stborder);     
@@ -364,7 +300,6 @@ row_num++;
    XSSFRow rowtotals=shet1.createRow(row_num);
    for(int i=4;i<col_count;i++){
        String col=columns[i];
-       System.out.println("col:"+col);
        String formulae= "SUM("+col+"3:"+col+""+(row_num)+")";
        XSSFCell cell= rowtotals.createCell(i);
         cell.setCellType(XSSFCell.CELL_TYPE_FORMULA);
@@ -384,8 +319,9 @@ row_num++;
         "from tx_curr LEFT JOIN subpartnera ON tx_curr.mflcode=subpartnera.CentreSanteID " +
         "LEFT JOIN district ON district.DistrictID=subpartnera.DistrictID " +
         "LEFT JOIN county on district.CountyID=county.CountyID "+where+" " +
-        "GROUP BY ccc_no";
+        "GROUP BY tx_curr.id";
   conn.rs = conn.st.executeQuery(rawData);
+        System.out.println("Raw Data : "+rawData);
    metaData = conn.rs.getMetaData();
 col_count = metaData.getColumnCount(); //number of column
 
@@ -418,119 +354,134 @@ row_num++;
   }
   
   //SUB COUNTY REPORT
-  String get_subcounty="/*Sub County summaries */ " +
-" " +
-"SELECT county.County AS 'County Name', district.DistrictNom AS 'Sub County', " +
-"COUNT(CASE WHEN tx_curr.oct_17='Active' then 1 END) AS 'Active', " +
-"COUNT(CASE WHEN tx_curr.oct_17='Defaulters' OR tx_curr.oct_17='Defaulter' then 1 END) AS 'Defaulter', " +
-"COUNT(CASE WHEN tx_curr.oct_17='T.O' OR tx_curr.oct_17='TO' then 1 END) AS 'T.O', " +
-"COUNT(CASE WHEN tx_curr.oct_17='LTFU' then 1 END) AS 'LTFU', " +
-"COUNT(CASE WHEN tx_curr.oct_17='Dead' then 1 END) AS 'Dead', " +
-"COUNT(CASE WHEN tx_curr.oct_17='Stopped ' then 1 END) AS 'Stopped', " +
-"COUNT(CASE WHEN tx_curr.oct_17='Pending verification' then 1 END) AS 'Pending verification', " +
-"COUNT(CASE WHEN tx_curr.oct_17!='' then 1 END) AS 'Total', " +
-" " +
-"COUNT(CASE WHEN tx_curr.nov_17='Active' then 1 END) AS 'Active', " +
-"COUNT(CASE WHEN tx_curr.nov_17='Defaulters' OR tx_curr.nov_17='Defaulter' then 1 END) AS 'Defaulter', " +
-"COUNT(CASE WHEN tx_curr.nov_17='T.O' OR tx_curr.nov_17='TO' then 1 END) AS 'T.O', " +
-"COUNT(CASE WHEN tx_curr.nov_17='LTFU' then 1 END) AS 'LTFU', " +
-"COUNT(CASE WHEN tx_curr.nov_17='Dead' then 1 END) AS 'Dead', " +
-"COUNT(CASE WHEN tx_curr.nov_17='Stopped ' then 1 END) AS 'Stopped', " +
-"COUNT(CASE WHEN tx_curr.nov_17='Pending verification' then 1 END) AS 'Pending verification', " +
-"COUNT(CASE WHEN tx_curr.nov_17!='' then 1 END) AS 'Total', " +
-" " +
-"COUNT(CASE WHEN tx_curr.dec_17='Active' then 1 END) AS 'Active', " +
-"COUNT(CASE WHEN tx_curr.dec_17='Defaulters' OR tx_curr.dec_17='Defaulter' then 1 END) AS 'Defaulter', " +
-"COUNT(CASE WHEN tx_curr.dec_17='T.O' OR tx_curr.dec_17='TO' then 1 END) AS 'T.O', " +
-"COUNT(CASE WHEN tx_curr.dec_17='LTFU' then 1 END) AS 'LTFU', " +
-"COUNT(CASE WHEN tx_curr.dec_17='Dead' then 1 END) AS 'Dead', " +
-"COUNT(CASE WHEN tx_curr.dec_17='Stopped ' then 1 END) AS 'Stopped', " +
-"COUNT(CASE WHEN tx_curr.dec_17='Pending verification' then 1 END) AS 'Pending verification', " +
-"COUNT(CASE WHEN tx_curr.dec_17!='' then 1 END) AS 'Total', " +
-" " +
-"COUNT(CASE WHEN tx_curr.jan_18='Active' then 1 END) AS 'Active', " +
-"COUNT(CASE WHEN tx_curr.jan_18='Defaulters' OR tx_curr.jan_18='Defaulter' then 1 END) AS 'Defaulter', " +
-"COUNT(CASE WHEN tx_curr.jan_18='T.O' OR tx_curr.jan_18='TO' then 1 END) AS 'T.O', " +
-"COUNT(CASE WHEN tx_curr.jan_18='LTFU' then 1 END) AS 'LTFU', " +
-"COUNT(CASE WHEN tx_curr.jan_18='Dead' then 1 END) AS 'Dead', " +
-"COUNT(CASE WHEN tx_curr.jan_18='Stopped ' then 1 END) AS 'Stopped', " +
-"COUNT(CASE WHEN tx_curr.jan_18='Pending verification' then 1 END) AS 'Pending verification', " +
-"COUNT(CASE WHEN tx_curr.jan_18!='' then 1 END) AS 'Total', " +
-" " +
-"COUNT(CASE WHEN tx_curr.feb_18='Active' then 1 END) AS 'Active', " +
-"COUNT(CASE WHEN tx_curr.feb_18='Defaulters' OR tx_curr.feb_18='Defaulter' then 1 END) AS 'Defaulter', " +
-"COUNT(CASE WHEN tx_curr.feb_18='T.O' OR tx_curr.feb_18='TO' then 1 END) AS 'T.O', " +
-"COUNT(CASE WHEN tx_curr.feb_18='LTFU' then 1 END) AS 'LTFU', " +
-"COUNT(CASE WHEN tx_curr.feb_18='Dead' then 1 END) AS 'Dead', " +
-"COUNT(CASE WHEN tx_curr.feb_18='Stopped ' then 1 END) AS 'Stopped', " +
-"COUNT(CASE WHEN tx_curr.feb_18='Pending verification' then 1 END) AS 'Pending verification', " +
-"COUNT(CASE WHEN tx_curr.feb_18!='' then 1 END) AS 'Total', " +
-" " +
-"COUNT(CASE WHEN tx_curr.mar_18='Active' then 1 END) AS 'Active', " +
-"COUNT(CASE WHEN tx_curr.mar_18='Defaulters' OR tx_curr.mar_18='Defaulter' then 1 END) AS 'Defaulter', " +
-"COUNT(CASE WHEN tx_curr.mar_18='T.O' OR tx_curr.mar_18='TO' then 1 END) AS 'T.O', " +
-"COUNT(CASE WHEN tx_curr.mar_18='LTFU' then 1 END) AS 'LTFU', " +
-"COUNT(CASE WHEN tx_curr.mar_18='Dead' then 1 END) AS 'Dead', " +
-"COUNT(CASE WHEN tx_curr.mar_18='Stopped ' then 1 END) AS 'Stopped', " +
-"COUNT(CASE WHEN tx_curr.mar_18='Pending verification' then 1 END) AS 'Pending verification', " +
-"COUNT(CASE WHEN tx_curr.mar_18!='' then 1 END) AS 'Total', " +
-" " +
-"COUNT(CASE WHEN tx_curr.apr_18='Active' then 1 END) AS 'Active', " +
-"COUNT(CASE WHEN tx_curr.apr_18='Defaulters' OR tx_curr.apr_18='Defaulter' then 1 END) AS 'Defaulter', " +
-"COUNT(CASE WHEN tx_curr.apr_18='T.O' OR tx_curr.apr_18='TO' then 1 END) AS 'T.O', " +
-"COUNT(CASE WHEN tx_curr.apr_18='LTFU' then 1 END) AS 'LTFU', " +
-"COUNT(CASE WHEN tx_curr.apr_18='Dead' then 1 END) AS 'Dead', " +
-"COUNT(CASE WHEN tx_curr.apr_18='Stopped ' then 1 END) AS 'Stopped', " +
-"COUNT(CASE WHEN tx_curr.apr_18='Pending verification' then 1 END) AS 'Pending verification', " +
-"COUNT(CASE WHEN tx_curr.apr_18!='' then 1 END) AS 'Total', " +
-" " +
-"COUNT(CASE WHEN tx_curr.may_18='Active' then 1 END) AS 'Active', " +
-"COUNT(CASE WHEN tx_curr.may_18='Defaulters' OR tx_curr.may_18='Defaulter' then 1 END) AS 'Defaulter', " +
-"COUNT(CASE WHEN tx_curr.may_18='T.O' OR tx_curr.may_18='TO' then 1 END) AS 'T.O', " +
-"COUNT(CASE WHEN tx_curr.may_18='LTFU' then 1 END) AS 'LTFU', " +
-"COUNT(CASE WHEN tx_curr.may_18='Dead' then 1 END) AS 'Dead', " +
-"COUNT(CASE WHEN tx_curr.may_18='Stopped ' then 1 END) AS 'Stopped', " +
-"COUNT(CASE WHEN tx_curr.may_18='Pending verification' then 1 END) AS 'Pending verification', " +
-"COUNT(CASE WHEN tx_curr.may_18!='' then 1 END) AS 'Total', " +
-" " +
-"COUNT(CASE WHEN tx_curr.jun_18='Active' then 1 END) AS 'Active', " +
-"COUNT(CASE WHEN tx_curr.jun_18='Defaulters' OR tx_curr.jun_18='Defaulter' then 1 END) AS 'Defaulter', " +
-"COUNT(CASE WHEN tx_curr.jun_18='T.O' OR tx_curr.jun_18='TO' then 1 END) AS 'T.O', " +
-"COUNT(CASE WHEN tx_curr.jun_18='LTFU' then 1 END) AS 'LTFU', " +
-"COUNT(CASE WHEN tx_curr.jun_18='Dead' then 1 END) AS 'Dead', " +
-"COUNT(CASE WHEN tx_curr.jun_18='Stopped ' then 1 END) AS 'Stopped', " +
-"COUNT(CASE WHEN tx_curr.jun_18='Pending verification' then 1 END) AS 'Pending verification', " +
-"COUNT(CASE WHEN tx_curr.jun_18!='' then 1 END) AS 'Total', " +
-" " +
-"COUNT(CASE WHEN tx_curr.jul_18='Active' then 1 END) AS 'Active', " +
-"COUNT(CASE WHEN tx_curr.jul_18='Defaulters' OR tx_curr.jul_18='Defaulter' then 1 END) AS 'Defaulter', " +
-"COUNT(CASE WHEN tx_curr.jul_18='T.O' OR tx_curr.jul_18='TO' then 1 END) AS 'T.O', " +
-"COUNT(CASE WHEN tx_curr.jul_18='LTFU' then 1 END) AS 'LTFU', " +
-"COUNT(CASE WHEN tx_curr.jul_18='Dead' then 1 END) AS 'Dead', " +
-"COUNT(CASE WHEN tx_curr.jul_18='Stopped ' then 1 END) AS 'Stopped', " +
-"COUNT(CASE WHEN tx_curr.jul_18='Pending verification' then 1 END) AS 'Pending verification', " +
-"COUNT(CASE WHEN tx_curr.jul_18!='' then 1 END) AS 'Total' " +
-" " +
-"from tx_curr LEFT JOIN subpartnera ON tx_curr.mflcode=subpartnera.CentreSanteID  " +
-"LEFT JOIN district ON district.DistrictID=subpartnera.DistrictID  " +
-"LEFT JOIN county on district.CountyID=county.CountyID  "+where+ 
-" GROUP BY district.DistrictNom ";
-  
+        String get_subcounty="SELECT `County Name` AS 'County Name', `Sub County` AS 'Sub County', " +
+      "SUM(`Active-201710`) AS 'Active',  " +
+      "SUM(`Defaulter-201710`) AS 'Defaulter',  " +
+      "SUM(`T.O-201710`) AS 'T.O',  " +
+      "SUM(`LTFU-201710`) AS 'LTFU',  " +
+      "SUM(`Dead-201710`)  AS 'Dead',  " +
+      "SUM(`Stopped-201710`)  AS 'Stopped',  " +
+      "SUM(`Pending verification-201710`)  AS 'Pending verification',  " +
+      "SUM(`Total-201710`) AS 'Total',   " +
+      "SUM(`Reported in MOH731-201710`) AS 'Reported in MOH731', " +
+      "SUM(`Variance-201710`) AS 'Variance',  " +
+      " " +
+      "SUM(`Active-201711`) AS 'Active',  " +
+      "SUM(`Defaulter-201711`) AS 'Defaulter',  " +
+      "SUM(`T.O-201711`) AS 'T.O',  " +
+      "SUM(`LTFU-201711`) AS 'LTFU',  " +
+      "SUM(`Dead-201711`)  AS 'Dead',  " +
+      "SUM(`Stopped-201711`)  AS 'Stopped',  " +
+      "SUM(`Pending verification-201711`)  AS 'Pending verification',  " +
+      "SUM(`Total-201711`) AS 'Total',   " +
+      "SUM(`Reported in MOH731-201711`) AS 'Reported in MOH731', " +
+      "SUM(`Variance-201711`) AS 'Variance',  " +
+      " " +
+      "SUM(`Active-201712`) AS 'Active',  " +
+      "SUM(`Defaulter-201712`) AS 'Defaulter',  " +
+      "SUM(`T.O-201712`) AS 'T.O',  " +
+      "SUM(`LTFU-201712`) AS 'LTFU',  " +
+      "SUM(`Dead-201712`)  AS 'Dead',  " +
+      "SUM(`Stopped-201712`)  AS 'Stopped',  " +
+      "SUM(`Pending verification-201712`)  AS 'Pending verification',  " +
+      "SUM(`Total-201712`) AS 'Total',   " +
+      "SUM(`Reported in MOH731-201712`) AS 'Reported in MOH731', " +
+      "SUM(`Variance-201712`) AS 'Variance',  " +
+      " " +
+      "SUM(`Active-201801`) AS 'Active',  " +
+      "SUM(`Defaulter-201801`) AS 'Defaulter',  " +
+      "SUM(`T.O-201801`) AS 'T.O',  " +
+      "SUM(`LTFU-201801`) AS 'LTFU',  " +
+      "SUM(`Dead-201801`)  AS 'Dead',  " +
+      "SUM(`Stopped-201801`)  AS 'Stopped',  " +
+      "SUM(`Pending verification-201801`)  AS 'Pending verification',  " +
+      "SUM(`Total-201801`) AS 'Total',   " +
+      "SUM(`Reported in MOH731-201801`) AS 'Reported in MOH731', " +
+      "SUM(`Variance-201801`) AS 'Variance',  " +
+      " " +
+      "SUM(`Active-201802`) AS 'Active',  " +
+      "SUM(`Defaulter-201802`) AS 'Defaulter',  " +
+      "SUM(`T.O-201802`) AS 'T.O',  " +
+      "SUM(`LTFU-201802`) AS 'LTFU',  " +
+      "SUM(`Dead-201802`)  AS 'Dead',  " +
+      "SUM(`Stopped-201802`)  AS 'Stopped',  " +
+      "SUM(`Pending verification-201802`)  AS 'Pending verification',  " +
+      "SUM(`Total-201802`) AS 'Total',   " +
+      "SUM(`Reported in MOH731-201802`) AS 'Reported in MOH731', " +
+      "SUM(`Variance-201802`) AS 'Variance',  " +
+      " " +
+      "SUM(`Active-201803`) AS 'Active',  " +
+      "SUM(`Defaulter-201803`) AS 'Defaulter',  " +
+      "SUM(`T.O-201803`) AS 'T.O',  " +
+      "SUM(`LTFU-201803`) AS 'LTFU',  " +
+      "SUM(`Dead-201803`)  AS 'Dead',  " +
+      "SUM(`Stopped-201803`)  AS 'Stopped',  " +
+      "SUM(`Pending verification-201803`)  AS 'Pending verification',  " +
+      "SUM(`Total-201803`) AS 'Total',   " +
+      "SUM(`Reported in MOH731-201803`) AS 'Reported in MOH731', " +
+      "SUM(`Variance-201803`) AS 'Variance', " +
+      " " +
+      "SUM(`Active-201804`) AS 'Active',  " +
+      "SUM(`Defaulter-201804`) AS 'Defaulter',  " +
+      "SUM(`T.O-201804`) AS 'T.O',  " +
+      "SUM(`LTFU-201804`) AS 'LTFU',  " +
+      "SUM(`Dead-201804`)  AS 'Dead',  " +
+      "SUM(`Stopped-201804`)  AS 'Stopped',  " +
+      "SUM(`Pending verification-201804`)  AS 'Pending verification',  " +
+      "SUM(`Total-201804`) AS 'Total',   " +
+      "SUM(`Reported in MOH731-201804`) AS 'Reported in MOH731', " +
+      "SUM(`Variance-201804`) AS 'Variance',  " +
+      " " +
+      "SUM(`Active-201805`) AS 'Active',  " +
+      "SUM(`Defaulter-201805`) AS 'Defaulter',  " +
+      "SUM(`T.O-201805`) AS 'T.O',  " +
+      "SUM(`LTFU-201805`) AS 'LTFU',  " +
+      "SUM(`Dead-201805`)  AS 'Dead',  " +
+      "SUM(`Stopped-201805`)  AS 'Stopped',  " +
+      "SUM(`Pending verification-201805`)  AS 'Pending verification',  " +
+      "SUM(`Total-201805`) AS 'Total',   " +
+      "SUM(`Reported in MOH731-201805`) AS 'Reported in MOH731', " +
+      "SUM(`Variance-201805`) AS 'Variance',  " +
+      " " +
+      "SUM(`Active-201806`) AS 'Active',  " +
+      "SUM(`Defaulter-201806`) AS 'Defaulter',  " +
+      "SUM(`T.O-201806`) AS 'T.O',  " +
+      "SUM(`LTFU-201806`) AS 'LTFU',  " +
+      "SUM(`Dead-201806`)  AS 'Dead',  " +
+      "SUM(`Stopped-201806`)  AS 'Stopped',  " +
+      "SUM(`Pending verification-201806`)  AS 'Pending verification',  " +
+      "SUM(`Total-201806`) AS 'Total',   " +
+      "SUM(`Reported in MOH731-201806`) AS 'Reported in MOH731', " +
+      "SUM(`Variance-201806`) AS 'Variance',  " +
+      " " +
+      "SUM(`Active-201807`) AS 'Active',  " +
+      "SUM(`Defaulter-201807`) AS 'Defaulter',  " +
+      "SUM(`T.O-201807`) AS 'T.O',  " +
+      "SUM(`LTFU-201807`) AS 'LTFU',  " +
+      "SUM(`Dead-201807`)  AS 'Dead',  " +
+      "SUM(`Stopped-201807`)  AS 'Stopped',  " +
+      "SUM(`Pending verification-201807`)  AS 'Pending verification',  " +
+      "SUM(`Total-201807`) AS 'Total',   " +
+      "SUM(`Reported in MOH731-201807`) AS 'Reported in MOH731', " +
+      "SUM(`Variance-201807`) AS 'Variance' " +
+      " FROM rpt_facil_summary "+where+ " GROUP BY SubCountyID";
+
   
       conn.rs = conn.st.executeQuery(get_subcounty);
       //read headers and post them
       metaData = conn.rs.getMetaData();
 col_count = metaData.getColumnCount(); //number of column
-
+System.out.println("columns:"+col_count);
 row_num = 0;
 rowheader=shet2.createRow(row_num);
 rowheader.setHeightInPoints(25);
-    for(int i=2;i<col_count;i++){ 
+    for(int i=1;i<col_count;i++){ 
     XSSFCell cell= rowheader.createCell(i);
-    int pos = (i-2)/8;
-    if(isEvenlyDivisable(i-2, 8)){
+    int pos = (i-2)/10;
+    if(isEvenlyDivisable(i-2, 10) && pos<periods.length){
+        System.out.println("pos:"+pos);
     cell.setCellValue(periods[pos]); 
-     shet2.addMergedRegion(new CellRangeAddress(0,0,i,i+7));
+     shet2.addMergedRegion(new CellRangeAddress(0,0,i,i+9));
     }
     cell.setCellStyle(styleMainHeader);
     }
@@ -539,32 +490,45 @@ rowheader.setHeightInPoints(25);
 
 row_num=1;
 rowheader=shet2.createRow(row_num);
+String column_name = "";
 for(int i=1;i<=col_count;i++){
     shet2.setColumnWidth(i-1, 5000);
-    String column_name = metaData.getColumnLabel(i);
+    column_name = metaData.getColumnLabel(i);
     XSSFCell cell= rowheader.createCell(i-1);
     cell.setCellValue(column_name); 
     cell.setCellStyle(styleHeader);
+    
 }
 row_num++;
+ String value="";
  while(conn.rs.next()){
-          XSSFRow row=shet2.createRow(row_num);
-          for(int i=1;i<=col_count;i++){
-              String value=conn.rs.getString(i);
-               XSSFCell cell= row.createCell(i-1);
-               if(isNumeric(value)){
-               cell.setCellValue(Double.parseDouble(value));
-               }
-               else{
-               cell.setCellValue(value);    
-               }
+
+    XSSFRow row=shet2.createRow(row_num);
+    for(int i=1;i<=col_count;i++){
+        value=conn.rs.getString(i);    
+        XSSFCell cell= row.createCell(i-1);
+        if(isNumeric(value)){
+        cell.setCellValue(Double.parseDouble(value));
+        }
+        else{
+        cell.setCellValue(value);    
+        }
                
-    if(isEvenlyDivisable(i-2, 8) && i>2){
-      cell.setCellStyle(styleTotal);      
+    if(isEvenlyDivisable(i-2, 10) && i>2){
+          if(value==null){value="0";}
+     if(Integer.parseInt(value)<=0){
+      cell.setCellStyle(styleGreen); 
+        }
+        else{
+        cell.setCellStyle(styleRed);      
+        }
+      cell = row.getCell(i-3);
+      cell.setCellStyle(styleTotal); 
     }
     else{
    cell.setCellStyle(stborder);     
     }
+
           }
           row_num++;    
  }
@@ -574,7 +538,6 @@ row_num++;
    XSSFRow rowtotals=shet2.createRow(row_num);
    for(int i=2;i<col_count;i++){
        String col=columns[i];
-       System.out.println("col:"+col);
        String formulae= "SUM("+col+"3:"+col+""+(row_num)+")";
        XSSFCell cell= rowtotals.createCell(i);
         cell.setCellType(XSSFCell.CELL_TYPE_FORMULA);
@@ -587,103 +550,117 @@ row_num++;
   //END OF SUBCOUNTY REPORT
   
   //county summaries
-    String getcounty="/*County summaries */ " +
-" " +
-"SELECT county.County AS 'County Name', " +
-"COUNT(CASE WHEN tx_curr.oct_17='Active' then 1 END) AS 'Active', " +
-"COUNT(CASE WHEN tx_curr.oct_17='Defaulters' OR tx_curr.oct_17='Defaulter' then 1 END) AS 'Defaulter', " +
-"COUNT(CASE WHEN tx_curr.oct_17='T.O' OR tx_curr.oct_17='TO' then 1 END) AS 'T.O', " +
-"COUNT(CASE WHEN tx_curr.oct_17='LTFU' then 1 END) AS 'LTFU', " +
-"COUNT(CASE WHEN tx_curr.oct_17='Dead' then 1 END) AS 'Dead', " +
-"COUNT(CASE WHEN tx_curr.oct_17='Stopped ' then 1 END) AS 'Stopped', " +
-"COUNT(CASE WHEN tx_curr.oct_17='Pending verification' then 1 END) AS 'Pending verification', " +
-"COUNT(CASE WHEN tx_curr.oct_17!='' then 1 END) AS 'Total', " +
-" " +
-"COUNT(CASE WHEN tx_curr.nov_17='Active' then 1 END) AS 'Active', " +
-"COUNT(CASE WHEN tx_curr.nov_17='Defaulters' OR tx_curr.nov_17='Defaulter' then 1 END) AS 'Defaulter', " +
-"COUNT(CASE WHEN tx_curr.nov_17='T.O' OR tx_curr.nov_17='TO' then 1 END) AS 'T.O', " +
-"COUNT(CASE WHEN tx_curr.nov_17='LTFU' then 1 END) AS 'LTFU', " +
-"COUNT(CASE WHEN tx_curr.nov_17='Dead' then 1 END) AS 'Dead', " +
-"COUNT(CASE WHEN tx_curr.nov_17='Stopped ' then 1 END) AS 'Stopped', " +
-"COUNT(CASE WHEN tx_curr.nov_17='Pending verification' then 1 END) AS 'Pending verification', " +
-"COUNT(CASE WHEN tx_curr.nov_17!='' then 1 END) AS 'Total', " +
-" " +
-"COUNT(CASE WHEN tx_curr.dec_17='Active' then 1 END) AS 'Active', " +
-"COUNT(CASE WHEN tx_curr.dec_17='Defaulters' OR tx_curr.dec_17='Defaulter' then 1 END) AS 'Defaulter', " +
-"COUNT(CASE WHEN tx_curr.dec_17='T.O' OR tx_curr.dec_17='TO' then 1 END) AS 'T.O', " +
-"COUNT(CASE WHEN tx_curr.dec_17='LTFU' then 1 END) AS 'LTFU', " +
-"COUNT(CASE WHEN tx_curr.dec_17='Dead' then 1 END) AS 'Dead', " +
-"COUNT(CASE WHEN tx_curr.dec_17='Stopped ' then 1 END) AS 'Stopped', " +
-"COUNT(CASE WHEN tx_curr.dec_17='Pending verification' then 1 END) AS 'Pending verification', " +
-"COUNT(CASE WHEN tx_curr.dec_17!='' then 1 END) AS 'Total', " +
-" " +
-"COUNT(CASE WHEN tx_curr.jan_18='Active' then 1 END) AS 'Active', " +
-"COUNT(CASE WHEN tx_curr.jan_18='Defaulters' OR tx_curr.jan_18='Defaulter' then 1 END) AS 'Defaulter', " +
-"COUNT(CASE WHEN tx_curr.jan_18='T.O' OR tx_curr.jan_18='TO' then 1 END) AS 'T.O', " +
-"COUNT(CASE WHEN tx_curr.jan_18='LTFU' then 1 END) AS 'LTFU', " +
-"COUNT(CASE WHEN tx_curr.jan_18='Dead' then 1 END) AS 'Dead', " +
-"COUNT(CASE WHEN tx_curr.jan_18='Stopped ' then 1 END) AS 'Stopped', " +
-"COUNT(CASE WHEN tx_curr.jan_18='Pending verification' then 1 END) AS 'Pending verification', " +
-"COUNT(CASE WHEN tx_curr.jan_18!='' then 1 END) AS 'Total', " +
-" " +
-"COUNT(CASE WHEN tx_curr.feb_18='Active' then 1 END) AS 'Active', " +
-"COUNT(CASE WHEN tx_curr.feb_18='Defaulters' OR tx_curr.feb_18='Defaulter' then 1 END) AS 'Defaulter', " +
-"COUNT(CASE WHEN tx_curr.feb_18='T.O' OR tx_curr.feb_18='TO' then 1 END) AS 'T.O', " +
-"COUNT(CASE WHEN tx_curr.feb_18='LTFU' then 1 END) AS 'LTFU', " +
-"COUNT(CASE WHEN tx_curr.feb_18='Dead' then 1 END) AS 'Dead', " +
-"COUNT(CASE WHEN tx_curr.feb_18='Stopped ' then 1 END) AS 'Stopped', " +
-"COUNT(CASE WHEN tx_curr.feb_18='Pending verification' then 1 END) AS 'Pending verification', " +
-"COUNT(CASE WHEN tx_curr.feb_18!='' then 1 END) AS 'Total', " +
-" " +
-"COUNT(CASE WHEN tx_curr.mar_18='Active' then 1 END) AS 'Active', " +
-"COUNT(CASE WHEN tx_curr.mar_18='Defaulters' OR tx_curr.mar_18='Defaulter' then 1 END) AS 'Defaulter', " +
-"COUNT(CASE WHEN tx_curr.mar_18='T.O' OR tx_curr.mar_18='TO' then 1 END) AS 'T.O', " +
-"COUNT(CASE WHEN tx_curr.mar_18='LTFU' then 1 END) AS 'LTFU', " +
-"COUNT(CASE WHEN tx_curr.mar_18='Dead' then 1 END) AS 'Dead', " +
-"COUNT(CASE WHEN tx_curr.mar_18='Stopped ' then 1 END) AS 'Stopped', " +
-"COUNT(CASE WHEN tx_curr.mar_18='Pending verification' then 1 END) AS 'Pending verification', " +
-"COUNT(CASE WHEN tx_curr.mar_18!='' then 1 END) AS 'Total', " +
-" " +
-"COUNT(CASE WHEN tx_curr.apr_18='Active' then 1 END) AS 'Active', " +
-"COUNT(CASE WHEN tx_curr.apr_18='Defaulters' OR tx_curr.apr_18='Defaulter' then 1 END) AS 'Defaulter', " +
-"COUNT(CASE WHEN tx_curr.apr_18='T.O' OR tx_curr.apr_18='TO' then 1 END) AS 'T.O', " +
-"COUNT(CASE WHEN tx_curr.apr_18='LTFU' then 1 END) AS 'LTFU', " +
-"COUNT(CASE WHEN tx_curr.apr_18='Dead' then 1 END) AS 'Dead', " +
-"COUNT(CASE WHEN tx_curr.apr_18='Stopped ' then 1 END) AS 'Stopped', " +
-"COUNT(CASE WHEN tx_curr.apr_18='Pending verification' then 1 END) AS 'Pending verification', " +
-"COUNT(CASE WHEN tx_curr.apr_18!='' then 1 END) AS 'Total', " +
-" " +
-"COUNT(CASE WHEN tx_curr.may_18='Active' then 1 END) AS 'Active', " +
-"COUNT(CASE WHEN tx_curr.may_18='Defaulters' OR tx_curr.may_18='Defaulter' then 1 END) AS 'Defaulter', " +
-"COUNT(CASE WHEN tx_curr.may_18='T.O' OR tx_curr.may_18='TO' then 1 END) AS 'T.O', " +
-"COUNT(CASE WHEN tx_curr.may_18='LTFU' then 1 END) AS 'LTFU', " +
-"COUNT(CASE WHEN tx_curr.may_18='Dead' then 1 END) AS 'Dead', " +
-"COUNT(CASE WHEN tx_curr.may_18='Stopped ' then 1 END) AS 'Stopped', " +
-"COUNT(CASE WHEN tx_curr.may_18='Pending verification' then 1 END) AS 'Pending verification', " +
-"COUNT(CASE WHEN tx_curr.may_18!='' then 1 END) AS 'Total', " +
-" " +
-"COUNT(CASE WHEN tx_curr.jun_18='Active' then 1 END) AS 'Active', " +
-"COUNT(CASE WHEN tx_curr.jun_18='Defaulters' OR tx_curr.jun_18='Defaulter' then 1 END) AS 'Defaulter', " +
-"COUNT(CASE WHEN tx_curr.jun_18='T.O' OR tx_curr.jun_18='TO' then 1 END) AS 'T.O', " +
-"COUNT(CASE WHEN tx_curr.jun_18='LTFU' then 1 END) AS 'LTFU', " +
-"COUNT(CASE WHEN tx_curr.jun_18='Dead' then 1 END) AS 'Dead', " +
-"COUNT(CASE WHEN tx_curr.jun_18='Stopped ' then 1 END) AS 'Stopped', " +
-"COUNT(CASE WHEN tx_curr.jun_18='Pending verification' then 1 END) AS 'Pending verification', " +
-"COUNT(CASE WHEN tx_curr.jun_18!='' then 1 END) AS 'Total', " +
-" " +
-"COUNT(CASE WHEN tx_curr.jul_18='Active' then 1 END) AS 'Active', " +
-"COUNT(CASE WHEN tx_curr.jul_18='Defaulters' OR tx_curr.jul_18='Defaulter' then 1 END) AS 'Defaulter', " +
-"COUNT(CASE WHEN tx_curr.jul_18='T.O' OR tx_curr.jul_18='TO' then 1 END) AS 'T.O', " +
-"COUNT(CASE WHEN tx_curr.jul_18='LTFU' then 1 END) AS 'LTFU', " +
-"COUNT(CASE WHEN tx_curr.jul_18='Dead' then 1 END) AS 'Dead', " +
-"COUNT(CASE WHEN tx_curr.jul_18='Stopped ' then 1 END) AS 'Stopped', " +
-"COUNT(CASE WHEN tx_curr.jul_18='Pending verification' then 1 END) AS 'Pending verification', " +
-"COUNT(CASE WHEN tx_curr.jul_18!='' then 1 END) AS 'Total' " +
-" " +
-"from tx_curr LEFT JOIN subpartnera ON tx_curr.mflcode=subpartnera.CentreSanteID  " +
-"LEFT JOIN district ON district.DistrictID=subpartnera.DistrictID  " +
-"LEFT JOIN county on district.CountyID=county.CountyID  "+where+ 
-" GROUP BY county.County ";
+            String getcounty="SELECT `County Name` AS 'County Name', " +
+        "SUM(`Active-201710`) AS 'Active',  " +
+        "SUM(`Defaulter-201710`) AS 'Defaulter',  " +
+        "SUM(`T.O-201710`) AS 'T.O',  " +
+        "SUM(`LTFU-201710`) AS 'LTFU',  " +
+        "SUM(`Dead-201710`)  AS 'Dead',  " +
+        "SUM(`Stopped-201710`)  AS 'Stopped',  " +
+        "SUM(`Pending verification-201710`)  AS 'Pending verification',  " +
+        "SUM(`Total-201710`) AS 'Total',   " +
+        "SUM(`Reported in MOH731-201710`) AS 'Reported in MOH731', " +
+        "SUM(`Variance-201710`) AS 'Variance',  " +
+        " " +
+        "SUM(`Active-201711`) AS 'Active',  " +
+        "SUM(`Defaulter-201711`) AS 'Defaulter',  " +
+        "SUM(`T.O-201711`) AS 'T.O',  " +
+        "SUM(`LTFU-201711`) AS 'LTFU',  " +
+        "SUM(`Dead-201711`)  AS 'Dead',  " +
+        "SUM(`Stopped-201711`)  AS 'Stopped',  " +
+        "SUM(`Pending verification-201711`)  AS 'Pending verification',  " +
+        "SUM(`Total-201711`) AS 'Total',   " +
+        "SUM(`Reported in MOH731-201711`) AS 'Reported in MOH731', " +
+        "SUM(`Variance-201711`) AS 'Variance',  " +
+        " " +
+        "SUM(`Active-201712`) AS 'Active',  " +
+        "SUM(`Defaulter-201712`) AS 'Defaulter',  " +
+        "SUM(`T.O-201712`) AS 'T.O',  " +
+        "SUM(`LTFU-201712`) AS 'LTFU',  " +
+        "SUM(`Dead-201712`)  AS 'Dead',  " +
+        "SUM(`Stopped-201712`)  AS 'Stopped',  " +
+        "SUM(`Pending verification-201712`)  AS 'Pending verification',  " +
+        "SUM(`Total-201712`) AS 'Total',   " +
+        "SUM(`Reported in MOH731-201712`) AS 'Reported in MOH731', " +
+        "SUM(`Variance-201712`) AS 'Variance',  " +
+        " " +
+        "SUM(`Active-201801`) AS 'Active',  " +
+        "SUM(`Defaulter-201801`) AS 'Defaulter',  " +
+        "SUM(`T.O-201801`) AS 'T.O',  " +
+        "SUM(`LTFU-201801`) AS 'LTFU',  " +
+        "SUM(`Dead-201801`)  AS 'Dead',  " +
+        "SUM(`Stopped-201801`)  AS 'Stopped',  " +
+        "SUM(`Pending verification-201801`)  AS 'Pending verification',  " +
+        "SUM(`Total-201801`) AS 'Total',   " +
+        "SUM(`Reported in MOH731-201801`) AS 'Reported in MOH731', " +
+        "SUM(`Variance-201801`) AS 'Variance',  " +
+        " " +
+        "SUM(`Active-201802`) AS 'Active',  " +
+        "SUM(`Defaulter-201802`) AS 'Defaulter',  " +
+        "SUM(`T.O-201802`) AS 'T.O',  " +
+        "SUM(`LTFU-201802`) AS 'LTFU',  " +
+        "SUM(`Dead-201802`)  AS 'Dead',  " +
+        "SUM(`Stopped-201802`)  AS 'Stopped',  " +
+        "SUM(`Pending verification-201802`)  AS 'Pending verification',  " +
+        "SUM(`Total-201802`) AS 'Total',   " +
+        "SUM(`Reported in MOH731-201802`) AS 'Reported in MOH731', " +
+        "SUM(`Variance-201802`) AS 'Variance',  " +
+        " " +
+        "SUM(`Active-201803`) AS 'Active',  " +
+        "SUM(`Defaulter-201803`) AS 'Defaulter',  " +
+        "SUM(`T.O-201803`) AS 'T.O',  " +
+        "SUM(`LTFU-201803`) AS 'LTFU',  " +
+        "SUM(`Dead-201803`)  AS 'Dead',  " +
+        "SUM(`Stopped-201803`)  AS 'Stopped',  " +
+        "SUM(`Pending verification-201803`)  AS 'Pending verification',  " +
+        "SUM(`Total-201803`) AS 'Total',   " +
+        "SUM(`Reported in MOH731-201803`) AS 'Reported in MOH731', " +
+        "SUM(`Variance-201803`) AS 'Variance', " +
+        " " +
+        "SUM(`Active-201804`) AS 'Active',  " +
+        "SUM(`Defaulter-201804`) AS 'Defaulter',  " +
+        "SUM(`T.O-201804`) AS 'T.O',  " +
+        "SUM(`LTFU-201804`) AS 'LTFU',  " +
+        "SUM(`Dead-201804`)  AS 'Dead',  " +
+        "SUM(`Stopped-201804`)  AS 'Stopped',  " +
+        "SUM(`Pending verification-201804`)  AS 'Pending verification',  " +
+        "SUM(`Total-201804`) AS 'Total',   " +
+        "SUM(`Reported in MOH731-201804`) AS 'Reported in MOH731', " +
+        "SUM(`Variance-201804`) AS 'Variance',  " +
+        " " +
+        "SUM(`Active-201805`) AS 'Active',  " +
+        "SUM(`Defaulter-201805`) AS 'Defaulter',  " +
+        "SUM(`T.O-201805`) AS 'T.O',  " +
+        "SUM(`LTFU-201805`) AS 'LTFU',  " +
+        "SUM(`Dead-201805`)  AS 'Dead',  " +
+        "SUM(`Stopped-201805`)  AS 'Stopped',  " +
+        "SUM(`Pending verification-201805`)  AS 'Pending verification',  " +
+        "SUM(`Total-201805`) AS 'Total',   " +
+        "SUM(`Reported in MOH731-201805`) AS 'Reported in MOH731', " +
+        "SUM(`Variance-201805`) AS 'Variance',  " +
+        " " +
+        "SUM(`Active-201806`) AS 'Active',  " +
+        "SUM(`Defaulter-201806`) AS 'Defaulter',  " +
+        "SUM(`T.O-201806`) AS 'T.O',  " +
+        "SUM(`LTFU-201806`) AS 'LTFU',  " +
+        "SUM(`Dead-201806`)  AS 'Dead',  " +
+        "SUM(`Stopped-201806`)  AS 'Stopped',  " +
+        "SUM(`Pending verification-201806`)  AS 'Pending verification',  " +
+        "SUM(`Total-201806`) AS 'Total',   " +
+        "SUM(`Reported in MOH731-201806`) AS 'Reported in MOH731', " +
+        "SUM(`Variance-201806`) AS 'Variance',  " +
+        " " +
+        "SUM(`Active-201807`) AS 'Active',  " +
+        "SUM(`Defaulter-201807`) AS 'Defaulter',  " +
+        "SUM(`T.O-201807`) AS 'T.O',  " +
+        "SUM(`LTFU-201807`) AS 'LTFU',  " +
+        "SUM(`Dead-201807`)  AS 'Dead',  " +
+        "SUM(`Stopped-201807`)  AS 'Stopped',  " +
+        "SUM(`Pending verification-201807`)  AS 'Pending verification',  " +
+        "SUM(`Total-201807`) AS 'Total',   " +
+        "SUM(`Reported in MOH731-201807`) AS 'Reported in MOH731', " +
+        "SUM(`Variance-201807`) AS 'Variance' " +
+        "FROM rpt_facil_summary "+where+ " GROUP BY CountyID";
   
   
       conn.rs = conn.st.executeQuery(getcounty);
@@ -696,10 +673,10 @@ rowheader=shet3.createRow(row_num);
 rowheader.setHeightInPoints(25);
     for(int i=1;i<col_count;i++){
     XSSFCell cell= rowheader.createCell(i);
-    int pos = (i-1)/8;
-    if(isEvenlyDivisable(i-1, 8)){
+    int pos = (i-1)/10;
+    if(isEvenlyDivisable(i-1, 10) && pos<periods.length){
     cell.setCellValue(periods[pos]); 
-     shet3.addMergedRegion(new CellRangeAddress(0,0,i,i+7));
+     shet3.addMergedRegion(new CellRangeAddress(0,0,i,i+9));
     }
     cell.setCellStyle(styleMainHeader);
     }
@@ -710,7 +687,7 @@ row_num=1;
 rowheader=shet3.createRow(row_num);
 for(int i=1;i<=col_count;i++){
     shet3.setColumnWidth(i-1, 5000);
-    String column_name = metaData.getColumnLabel(i);
+    column_name = metaData.getColumnLabel(i);
     XSSFCell cell= rowheader.createCell(i-1);
     cell.setCellValue(column_name); 
     cell.setCellStyle(styleHeader);
@@ -719,7 +696,7 @@ row_num++;
  while(conn.rs.next()){
           XSSFRow row=shet3.createRow(row_num);
           for(int i=1;i<=col_count;i++){
-              String value=conn.rs.getString(i);
+               value=conn.rs.getString(i);
                XSSFCell cell= row.createCell(i-1);
                if(isNumeric(value)){
                cell.setCellValue(Double.parseDouble(value));
@@ -728,7 +705,16 @@ row_num++;
                cell.setCellValue(value);    
                }
                
-    if(isEvenlyDivisable(i-1, 8) && i>1){
+    if(isEvenlyDivisable(i-1, 10) && i>1){
+          if(value==null){value="0";}
+        if(Integer.parseInt(value)<=0){
+      cell.setCellStyle(styleGreen);  
+        }
+        else{
+        cell.setCellStyle(styleRed);      
+        }
+      
+      cell = row.getCell(i-3);
       cell.setCellStyle(styleTotal);      
     }
     else{
@@ -743,7 +729,6 @@ row_num++;
    XSSFRow rowtotals=shet3.createRow(row_num);
    for(int i=1;i<col_count;i++){
        String col=columns[i];
-       System.out.println("col:"+col);
        String formulae= "SUM("+col+"3:"+col+""+(row_num)+")";
        XSSFCell cell= rowtotals.createCell(i);
         cell.setCellType(XSSFCell.CELL_TYPE_FORMULA);
@@ -786,7 +771,7 @@ row_num=0;
 rowheader=shet4.createRow(row_num);
 for(int i=1;i<=col_count;i++){
     shet4.setColumnWidth(i-1, 5000);
-    String column_name = metaData.getColumnLabel(i);
+    column_name = metaData.getColumnLabel(i);
     XSSFCell cell= rowheader.createCell(i-1);
     cell.setCellValue(column_name); 
     cell.setCellStyle(styleHeader);
@@ -796,7 +781,7 @@ row_num++;
   while(conn.rs.next()){
             XSSFRow row=shet4.createRow(row_num);
           for(int i=1;i<=col_count;i++){
-              String value=conn.rs.getString(i);
+              value=conn.rs.getString(i);
                XSSFCell cell= row.createCell(i-1);
                if(isNumeric(value)){
                cell.setCellValue(Double.parseDouble(value));
@@ -822,7 +807,7 @@ row_num=0;
 rowheader=shet5.createRow(row_num);
 for(int i=1;i<=col_count;i++){
     shet5.setColumnWidth(i-1, 5000);
-    String column_name = metaData.getColumnLabel(i);
+    column_name = metaData.getColumnLabel(i);
     XSSFCell cell= rowheader.createCell(i-1);
     cell.setCellValue(column_name); 
     cell.setCellStyle(styleHeader);
@@ -832,7 +817,7 @@ row_num++;
   while(conn.rs.next()){
             XSSFRow row=shet5.createRow(row_num);
           for(int i=1;i<=col_count;i++){
-              String value=conn.rs.getString(i);
+              value=conn.rs.getString(i);
                XSSFCell cell= row.createCell(i-1);
                if(isNumeric(value)){
                cell.setCellValue(Double.parseDouble(value));

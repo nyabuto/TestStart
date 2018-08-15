@@ -53,12 +53,12 @@
                  
                     <h3 class="menu-title" style="text-align: center; font-size: 130%;">Modules</h3><!-- /.menu-title -->
                     <li>
-                     <a href="Dashboard.jsp"> <i class="menu-icon fa fa-dashboard"></i>Dashboard </a>
+                     <a href="DashCurrRRI.jsp"> <i class="menu-icon fa fa-dashboard"></i>Dashboard </a>
                     </li>
                    <li class="menu-item-has-children active dropdown">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> <i class="menu-icon fa fa-upload"></i>Upload Data</a>
                         <ul class="sub-menu children dropdown-menu">
-                            <li><i class="fa fa-upload"></i><a href="ExcelUpload.jsp">Test&Start Data</a></li>
+                            <!--<li><i class="fa fa-upload"></i><a href="ExcelUpload.jsp">Test&Start Data</a></li>-->
                             <li><i class="fa fa-upload"></i><a href="TXCURRUpload.jsp">Upload Current on ART Data</a></li> 
                         </ul>
                     </li>
@@ -69,25 +69,26 @@
                     <li class="menu-item-has-children active dropdown">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> <i class="menu-icon fa fa-table"></i>Reports</a>
                         <ul class="sub-menu children dropdown-menu">
-                            <li><i class="fa fa-table"></i><a href="raw_data.jsp">Test&Start Raw Data</a></li>
+                            <!--<li><i class="fa fa-table"></i><a href="raw_data.jsp">Test&Start Raw Data</a></li>-->
+                            <li><i class="fa fa-table"></i><a href="TX_CURR_Report.jsp">Current on ART Data</a></li>
                         </ul>
                     </li>
-                    <li class="menu-item-has-children active dropdown">
+<!--                    <li class="menu-item-has-children active dropdown">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> <i class="menu-icon fa fa-th"></i>Management</a>
                         <ul class="sub-menu children dropdown-menu">
                             <li><i class="menu-icon fa fa-th"></i><a href="#">Manage Users</a></li>
                             <li><i class="menu-icon fa fa-th"></i><a href="#">Manage Uploads</a></li>
                         </ul>
-                    </li>
+                    </li>-->
 
 
                     <li class="">
                         <a href="user_profile.jsp"  aria-haspopup="true" aria-expanded="false"> <i class="menu-icon fa fa-user-circle"></i>User Profile</a>
                     </li>
-                    <li class="active">
+<!--                    <li class="active">
                         <a href="logout"  aria-haspopup="true" aria-expanded="false"> <i class="menu-icon fa fa-lock"></i>Logout</a>
                     </li>
-                    <li>
+                    <li>-->
                       
                 </ul>
             </div><!-- /.navbar-collapse -->
