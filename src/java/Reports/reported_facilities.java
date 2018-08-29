@@ -16,31 +16,30 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
 
 /**
  *
  * @author GNyabuto
  */
-public class load_cur_art_data extends HttpServlet {
+public class reported_facilities extends HttpServlet {
 HttpSession session;
-int monthlyachieved,monthlyrecounted;
-int oct_17,nov_17,dec_17,jan_18,feb_18,mar_18,apr_18,may_18,jun_18,jul_18;
-String where;
+String output,prev_county_reported,prev_subcounty_reported,reported,notreported;
+String prev_county_notreported,prev_subcounty_notreported;
+int isreported = 0,counter_reported,counter_notreported;
+
 int has_data;
-String county,sub_county,facility;
 String highv;
+String county,sub_county,facility,where;
+
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException, SQLException {
         response.setContentType("text/html;charset=UTF-8");
         try (PrintWriter out = response.getWriter()) {
-            dbConn conn = new dbConn();
-            JSONArray jarray = new JSONArray();
-            JSONArray jarray1 = new JSONArray();
-            JSONArray jarray2 = new JSONArray();
-            
-        has_data=0;  
+           session = request.getSession();
+           dbConn conn = new dbConn();
+           
+           
+                       
         highv = request.getParameter("highv");
         county = request.getParameter("county");
         sub_county = request.getParameter("sub_county");
@@ -61,7 +60,7 @@ String highv;
                     has_data=0;
                     for(String ct:county_data){
                      if(ct!=null && !ct.equals("")){
-                      where+="CountyID='"+ct+"' OR ";
+                      where+="county.CountyID='"+ct+"' OR ";
                       has_data++;
                      }  
                     }
@@ -84,7 +83,7 @@ String highv;
            has_data=0;
            for(String sct:sub_county_data){
             if(sct!=null && !sct.equals("")){
-             where+="SubCountyID='"+sct+"' OR ";
+             where+="district.DistrictID='"+sct+"' OR ";
              has_data++;
             }  
            }
@@ -106,10 +105,11 @@ String highv;
            has_data=0;
            for(String fac:facility_data){
             if(fac!=null && !fac.equals("")){
-             where+="SubpartnerID='"+fac+"' OR ";
+             where+="subpartnera.SubpartnerID='"+fac+"' OR ";
              has_data++;
             }  
            }
+           
            if(has_data>0){
            where = removeLast(where, 3);
            where+=")";
@@ -121,75 +121,81 @@ String highv;
             //where = " WHERE subpartnera.SubpartnerID='"+facility+"' ";   
         }
         
-                 String wherev=where;
-      if(where.contains("high_volume=2")){
+            
+
+  if(where.contains("high_volume=1")){
+      where = where.replace("high_volume=1", "all_highvolume=1");
+  }
+  else if(where.contains("high_volume=0")){
+      where = where.replace("high_volume=0", "all_highvolume IS NULL");
+  }
+  else if(where.contains("high_volume=2")){
       where = where.replace("high_volume=2", " 1=1 ");
-  }  
-      if(wherev.contains("high_volume=0")){
-      wherev = wherev.replace("high_volume=0", " high_volume IS NULL ");
-  }  
-      if(wherev.contains("high_volume=2")){
-      wherev = wherev.replace("high_volume=2", " 1=1 ");
-  }  
+  }    
+     
+  else{
+      where="WHERE 1=1 ";
+  }
+           
+           
+           
+           reported="<div class=\"col-12 col-md-6\"><div style=\"font-weight:900; font-size:24px;\">Reported Sites</div>";
+           notreported="<div class=\"col-12 col-md-6\"><div style=\"font-weight:900; font-size:24px;\">Not Reported Sites</div>";
+           output="";
+           String query = "SELECT \n" +
+            "county.County AS County,\n" +
+            "district.DistrictNom AS SubCounty,\n" +
+            "subpartnera.SubPartnerNom AS Facility,\n" +
+            "COUNT(DISTINCT(CASE WHEN subpartnera.active=1 && subpartnera.ART=1 THEN CentreSanteId END)) AS all_sites,\n" +
+            "COUNT(DISTINCT(CASE WHEN subpartnera.active=1 && subpartnera.ART=1 THEN tx_curr.mflcode END)) AS reported_sites\n" +
+            " \n" +
+            "FROM subpartnera \n" +
+            "LEFT JOIN tx_curr ON tx_curr.mflcode=subpartnera.CentreSanteId \n" +
+            "LEFT JOIN district ON district.DistrictID=subpartnera.DistrictID \n" +
+            "LEFT JOIN county on district.CountyID=county.CountyID "+where+" AND ART=1 && subpartnera.active=1 GROUP BY CentreSanteId \n" +
+            "ORDER BY County,SubCounty,Facility";
+            conn.rs = conn.st.executeQuery(query);
+            counter_reported=counter_notreported=0;
+            prev_county_reported=prev_subcounty_reported=prev_county_notreported=prev_subcounty_notreported="";
+            while(conn.rs.next()){
+            isreported = conn.rs.getInt(5);
             
+               switch (isreported) {
+                   case 1:
+                       counter_reported++;
+                       if(!prev_county_reported.equals(conn.rs.getString(1))){
+                           reported+="<b><u>"+conn.rs.getString(1)+" County</u></b><br>" ;
+                       }        
+                       if(!prev_subcounty_reported.equals(conn.rs.getString(2))){
+                           reported+="<b>"+conn.rs.getString(2)+"</b><br>" ;
+                       }        
+                       reported+=counter_reported+". "+conn.rs.getString(3)+"<br>" ;
+                       prev_county_reported = conn.rs.getString(1);
+                       prev_subcounty_reported=conn.rs.getString(2);
+                       break;
+                   case 0:
+                       counter_notreported++;
+                       if(!prev_county_notreported.equals(conn.rs.getString(1))){
+                           notreported+="<b><u>"+conn.rs.getString(1)+" County</u></b><br>" ;
+                       }        
+                       if(!prev_subcounty_notreported.equals(conn.rs.getString(2))){
+                           notreported+="<b>"+conn.rs.getString(2)+"</b><br>" ;
+                       }        
+                       notreported+=counter_notreported+". "+conn.rs.getString(3)+"<br>" ;
+                       prev_county_notreported = conn.rs.getString(1);
+                       prev_subcounty_notreported=conn.rs.getString(2);
+                       break;
+                   default:
+                       break;
+               }
+             }
             
-            
- oct_17=nov_17=dec_17=jan_18=feb_18=mar_18=apr_18=may_18=jun_18=jul_18=0;           
-            
-            
-String getrecounted="SELECT SUM(`Active-201710`) AS 'oct_17',SUM(`Active-201711`) AS 'nov_17',SUM(`Active-201712`) AS 'dec_17'," +
-"SUM(`Active-201801`) AS 'jan_18',SUM(`Active-201802`) AS 'feb_18',SUM(`Active-201803`) AS 'mar_18'," +
-"SUM(`Active-201804`) AS 'apr_18',SUM(`Active-201805`) AS 'may_18',SUM(`Active-201806`) AS 'jun_18'," +
-"SUM(`Active-201807`) AS 'jul_18' FROM rpt_facil_summary "+wherev+" ";
-            System.out.println("recounted : "+getrecounted);
-conn.rs = conn.st.executeQuery(getrecounted);
-if(conn.rs.next()){
-   oct_17 = conn.rs.getInt(1);
-   nov_17 = conn.rs.getInt(2);
-   dec_17 = conn.rs.getInt(3);
-   jan_18 = conn.rs.getInt(4);
-   feb_18 = conn.rs.getInt(5);
-   mar_18 = conn.rs.getInt(6);
-   apr_18 = conn.rs.getInt(7);
-   may_18 = conn.rs.getInt(8);
-   jun_18 = conn.rs.getInt(9);
-   jul_18 = conn.rs.getInt(10);
-    
-    System.out.println("jan : "+jan_18);
-    for(int i=1;i<=10;i++){
-    jarray1.add(conn.rs.getInt(i));
-    }
-}
-JSONObject obj2 = new JSONObject();
-obj2.put("data", jarray1);
-obj2.put("name", "Recounted");
-
-//get achieved
-String getreported="SELECT (SUM(oct_17)-"+oct_17+") AS 'oct_17',(SUM(nov_17)-"+nov_17+") AS 'nov_17',(SUM(dec_17)-"+dec_17+") AS 'dec_17'," +
-"(SUM(jan_18)-"+jan_18+") AS 'oct_17',(SUM(feb_18)-"+feb_18+") AS 'feb_18',(SUM(mar_18)-"+mar_18+") AS 'mar_18'," +
-"(SUM(apr_18)-"+apr_18+") AS 'apr_18',(SUM(may_18)-"+may_18+") AS 'may_18',(SUM(jun_18)-"+jun_18+") AS 'jun_18'," +
-"(SUM(jul_18)-"+jul_18+") AS 'jul_18'FROM current_art "+where+" ";
-conn.rs = conn.st.executeQuery(getreported);
-            System.out.println("query: "+getreported);
-if(conn.rs.next()){
-    for(int i=1;i<=10;i++){
-    jarray2.add(conn.rs.getInt(i));
-    }
-}
-JSONObject obj1 = new JSONObject();
-obj1.put("data", jarray2);
-obj1.put("name", "Variance (Reported in 731 - Recounted)");
-
-
-jarray.add(obj1);
-jarray.add(obj2);
-
-
-
-conn.rs.close();
-conn.st.close();
-
-            out.println(jarray);
+                    
+          reported+="</div>";          
+          notreported+="</div>";          
+         output+="<div>"+reported+""+notreported+"</div>";           
+                    
+            out.println(output);
         }
     }
 
@@ -208,7 +214,7 @@ conn.st.close();
     try {
         processRequest(request, response);
     } catch (SQLException ex) {
-        Logger.getLogger(load_cur_art_data.class.getName()).log(Level.SEVERE, null, ex);
+        Logger.getLogger(reported_facilities.class.getName()).log(Level.SEVERE, null, ex);
     }
     }
 
@@ -226,7 +232,7 @@ conn.st.close();
     try {
         processRequest(request, response);
     } catch (SQLException ex) {
-        Logger.getLogger(load_cur_art_data.class.getName()).log(Level.SEVERE, null, ex);
+        Logger.getLogger(reported_facilities.class.getName()).log(Level.SEVERE, null, ex);
     }
     }
 
@@ -240,7 +246,8 @@ conn.st.close();
         return "Short description";
     }// </editor-fold>
 
-        public String removeLast(String str, int num) {
+    
+      public String removeLast(String str, int num) {
     if (str != null && str.length() > 0) {
         str = str.substring(0, str.length() - num);
     }

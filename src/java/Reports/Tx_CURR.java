@@ -43,33 +43,35 @@ String county,sub_county,facility,where;
 int has_data;
 String[] periods = {"Oct 2017","Nov 2017","Dec 2017","Jan 2018","Feb 2018","Mar 2018","Apr 2018","May 2018","Jun 2018","July 2018"};  
 String columns[] = {"A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","AA","AB","AC","AD","AE","AF","AG","AH","AI","AJ","AK","AL","AM","AN","AO","AP","AQ","AR","AS","AT","AU","AV","AW","AX","AY","AZ","BA","BB","BC","BD","BE","BF","BG","BH","BI","BJ","BK","BL","BM","BN","BO","BP","BQ","BR","BS","BT","BU","BV","BW","BX","BY","BZ","CA","CB","CC","CD","CE","CF","CG","CH","CI","CJ","CK","CL","CM","CN","CO","CP","CQ","CR","CS","CT","CU","CV","CW","CX","CY","CZ"};
-    protected void processRequest(HttpServletRequest request, HttpServletResponse response)
+String highv;
+protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException, SQLException {
        dbConn conn = new dbConn();
        session = request.getSession();
         Manager manager = new Manager();
        
-        
+        highv = request.getParameter("highv");
         county = request.getParameter("county");
         sub_county = request.getParameter("sub_county");
         facility = request.getParameter("facility");
         
        
-        where = "";
+        where = " WHERE high_volume="+highv+" ";
         if(facility==null || facility.equals("")){
-            where="";
+            where=" WHERE high_volume="+highv+" ";
             if(sub_county==null || sub_county.equals("")){
-             where="";
+             where=" WHERE high_volume="+highv+" ";
                 if(county==null || county.equals("")){
-                where="";    
+                where=" WHERE high_volume="+highv+" ";    
                 }
                 else{
                    String[] county_data = request.getParameterValues("county"); 
-                   where = " WHERE (";
+                   where = " WHERE high_volume="+highv+" AND (";
                     has_data=0;
+                    System.out.println("counties : "+county_data.length);
                     for(String ct:county_data){
                      if(ct!=null && !ct.equals("")){
-                      where+="CountyID='"+ct+"' OR ";
+                      where+="county.CountyID='"+ct+"' OR ";
                       has_data++;
                      }  
                     }
@@ -79,7 +81,7 @@ String columns[] = {"A","B","C","D","E","F","G","H","I","J","K","L","M","N","O",
                     where+=")";
                     }
                     else{
-                     where = "";   
+                     where = " WHERE high_volume="+highv+" ";   
                     }
                 //where = " WHERE county.CountyID='"+county+"' ";
                    
@@ -87,9 +89,8 @@ String columns[] = {"A","B","C","D","E","F","G","H","I","J","K","L","M","N","O",
                 
             }
             else{
-                System.out.println("subcounty : "+request.getParameter("sub_county"));
             String[] sub_county_data = request.getParameterValues("sub_county");
-               where = " WHERE (";
+               where = " WHERE high_volume="+highv+" AND (";
            has_data=0;
            for(String sct:sub_county_data){
             if(sct!=null && !sct.equals("")){
@@ -103,7 +104,7 @@ String columns[] = {"A","B","C","D","E","F","G","H","I","J","K","L","M","N","O",
            where+=")";
            }
            else{
-            where = " ";   
+            where = " WHERE  high_volume="+highv+" ";   
            } 
                 System.out.println(has_data+" where : "+where);    
               // where = " WHERE district.DistrictID='"+sub_county+"' ";    
@@ -111,7 +112,7 @@ String columns[] = {"A","B","C","D","E","F","G","H","I","J","K","L","M","N","O",
         }
         else{
          String[] facility_data = request.getParameterValues("facility");   
-            where = " WHERE (";
+            where = " WHERE  high_volume="+highv+" AND (";
            has_data=0;
            for(String fac:facility_data){
             if(fac!=null && !fac.equals("")){
@@ -125,20 +126,23 @@ String columns[] = {"A","B","C","D","E","F","G","H","I","J","K","L","M","N","O",
            where+=")";
            }
            else{
-            where = " ";   
+            where = " WHERE high_volume="+highv+" ";   
            } 
             
             //where = " WHERE subpartnera.SubpartnerID='"+facility+"' ";   
         }
         
+      System.out.println("where : "+where);  
         
+      
+      
     XSSFWorkbook wb=new XSSFWorkbook();
     XSSFSheet shet0=wb.createSheet("Raw Data");
     XSSFSheet shet1=wb.createSheet("Facility Summary");
     XSSFSheet shet2=wb.createSheet("Sub County Summary");
     XSSFSheet shet3=wb.createSheet("County Summary");
     XSSFSheet shet4=wb.createSheet("Due for Viral Load");
-    XSSFSheet shet5=wb.createSheet("Project Summary By Status");
+    XSSFSheet shet5=wb.createSheet("Activity Summary By Status");
      XSSFFont font=wb.createFont();
     font.setFontHeightInPoints((short)18);
     font.setFontName("Cambria");
@@ -228,14 +232,31 @@ String columns[] = {"A","B","C","D","E","F","G","H","I","J","K","L","M","N","O",
     int row_num=0;  
     
     
+  String wherehv  = "";
+  if(where.contains("high_volume=1")){
+      wherehv = where.replace("high_volume=1", "all_highvolume=1");
+      where = where.replace("high_volume=1", "high_volume=1");
+  }
+  else if(where.contains("high_volume=0")){
+      wherehv = where.replace("high_volume=0", "all_highvolume IS NULL");
+      where = where.replace("high_volume=0", "high_volume IS NULL");
+  }
+  else if(where.contains("high_volume=2")){
+      wherehv = where.replace("high_volume=2", " 1=1 ");
+      where = where.replace("high_volume=2", " 1=1 ");
+  }
+  
+    System.out.println("where:"+where);
+    System.out.println("wherehv:"+wherehv);
+    
        
-      facil_data = "SELECT * FROM rpt_facil_summary "+where+" " +
+      facil_data = "SELECT * FROM rpt_facil_summary "+where.replace("county.","")+" " +
                     "GROUP BY MFLCode";  
         System.out.println("facil_data:"+facil_data);
       conn.rs = conn.st.executeQuery(facil_data);
       //read headers and post them
       metaData = conn.rs.getMetaData();
-col_count = metaData.getColumnCount()-3; //number of column
+col_count = metaData.getColumnCount()-4; //number of column
 
 rowheader=shet1.createRow(row_num);
 rowheader.setHeightInPoints(25);
@@ -309,7 +330,6 @@ row_num++;
  }
   
   //end of totals
- 
 // Raw Data 
   String rawData="" +
         "SELECT county.County AS 'County Name', district.DistrictNom AS 'Sub County', subpartnera.SubPartnerNom AS 'Health Facility',CentreSanteId AS MFLCode," +
@@ -318,8 +338,9 @@ row_num++;
         "may_18 AS 'May 2018',jun_18 AS 'Jun 2018', jul_18 AS 'Jul 2018', month_due_vl AS 'Month due for Viral Load'" +
         "from tx_curr LEFT JOIN subpartnera ON tx_curr.mflcode=subpartnera.CentreSanteID " +
         "LEFT JOIN district ON district.DistrictID=subpartnera.DistrictID " +
-        "LEFT JOIN county on district.CountyID=county.CountyID "+where+" " +
+        "LEFT JOIN county on district.CountyID=county.CountyID "+wherehv.replace("SubCountyID","district.DistrictID")+" " +
         "GROUP BY tx_curr.id";
+  
   conn.rs = conn.st.executeQuery(rawData);
         System.out.println("Raw Data : "+rawData);
    metaData = conn.rs.getMetaData();
@@ -464,7 +485,7 @@ row_num++;
       "SUM(`Total-201807`) AS 'Total',   " +
       "SUM(`Reported in MOH731-201807`) AS 'Reported in MOH731', " +
       "SUM(`Variance-201807`) AS 'Variance' " +
-      " FROM rpt_facil_summary "+where+ " GROUP BY SubCountyID";
+      " FROM rpt_facil_summary "+where.replace("county.", "")+ " GROUP BY SubCountyID";
 
   
       conn.rs = conn.st.executeQuery(get_subcounty);
@@ -660,7 +681,7 @@ row_num++;
         "SUM(`Total-201807`) AS 'Total',   " +
         "SUM(`Reported in MOH731-201807`) AS 'Reported in MOH731', " +
         "SUM(`Variance-201807`) AS 'Variance' " +
-        "FROM rpt_facil_summary "+where+ " GROUP BY CountyID";
+        "FROM rpt_facil_summary "+where.replace("county.", "")+ " GROUP BY CountyID";
   
   
       conn.rs = conn.st.executeQuery(getcounty);
@@ -760,7 +781,7 @@ row_num++;
         " " +
         "from tx_curr LEFT JOIN subpartnera ON tx_curr.mflcode=subpartnera.CentreSanteID  " +
         "LEFT JOIN district ON district.DistrictID=subpartnera.DistrictID  " +
-        "LEFT JOIN county on district.CountyID=county.CountyID "+where+" " +
+        "LEFT JOIN county on district.CountyID=county.CountyID "+wherehv.replace("SubCountyID","district.DistrictID")+" " +
         "GROUP BY MFLCode";
   
   conn.rs = conn.st.executeQuery(due_viral_load);

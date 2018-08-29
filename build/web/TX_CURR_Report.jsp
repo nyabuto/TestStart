@@ -70,6 +70,16 @@
                           </div>
                              
                           <div class="row form-group">
+                            <div class="col col-md-3">WorkLoad</div>
+                            <div class="col-12 col-md-3"><select id="highv" name="highv" class="form-control-sm js-example-basic-multiple" style="min-width: 300px;">
+                                    <option value="2" selected>All sites</option>
+                                    <option value="1">High-volume sites</option>
+                                    <option value="0">Non high-volume sites</option>>
+                                </select>
+                            </div>
+                          </div>
+                             
+                          <div class="row form-group">
                             <div class="col col-md-3">Select County</div>
                             <div class="col-12 col-md-3"><select id="county" name="county" class="form-control-sm js-example-basic-multiple" multiple="multiple" style="min-width: 300px;"><option value="">Choose County</option></select></div>
                           </div>
@@ -125,6 +135,7 @@
     <script type="text/javascript">
          jQuery(document).ready(function() { 
              
+        jQuery('#highv').select2();
         jQuery('#county').select2({
               placeholder: "[Optional] Select counties"
           });
@@ -146,13 +157,19 @@
     jQuery("#sub_county").change(function(){
        load_facility(); 
     });
+    jQuery("#highv").change(function(){
+        load_county();
+        load_subcounty(); 
+        load_facility();
+    });
     
     });  
         
         function load_county(){
+            var highv = jQuery("#highv").val();
        jQuery("#county").val(null);
                jQuery.ajax({
-        url:'load_counties',
+        url:'load_counties?highv='+highv,
         type:"post",
         dataType:"html",
         success:function(output){  
@@ -165,12 +182,13 @@
                });
         }
         function load_subcounty(){
+              var highv = jQuery("#highv").val();
             var county = jQuery("#county").val();
             if(county!=null){
             county = county.toString();
              county = county.replace(/,/g,"_");
                jQuery.ajax({
-        url:'load_sub_counties?county='+county,
+        url:'load_sub_counties?county='+county+"&&highv="+highv,
         type:"post",
         dataType:"html",
         success:function(output){
@@ -186,12 +204,13 @@
         }
         
         function load_facility(){
+              var highv = jQuery("#highv").val();
             var sub_county = jQuery("#sub_county").val();
             if(sub_county!=null){
              sub_county = sub_county.toString();
              sub_county = sub_county.replace(/,/g,"_");
                jQuery.ajax({
-        url:'load_facilities?sub_county='+sub_county,
+        url:'load_facilities?sub_county='+sub_county+"&&highv="+highv,
         type:"post",
         dataType:"html",
         success:function(output){

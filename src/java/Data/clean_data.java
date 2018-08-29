@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package Loaders;
+package Data;
 
 import Db.dbConn;
 import java.io.IOException;
@@ -21,30 +21,17 @@ import javax.servlet.http.HttpSession;
  *
  * @author GNyabuto
  */
-public class load_counties extends HttpServlet {
+public class clean_data extends HttpServlet {
 HttpSession session;
-String output="";
-String highv;
-
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException, SQLException {
         response.setContentType("text/html;charset=UTF-8");
         try (PrintWriter out = response.getWriter()) {
-           dbConn conn = new dbConn();
+            session = request.getSession();
+           ActionCleanData cleandata = new ActionCleanData();
+           cleandata.clean_data();
            
-              //highv = request.getParameter("highv");
-           
-           
-            output="<option value=\"\">Choose County</option>";
-            
-           String getCounties = "SELECT CountyID,County FROM county ORDER BY County";
-           conn.rs = conn.st.executeQuery(getCounties);
-           while(conn.rs.next()){
-               output+="<option value=\""+conn.rs.getString(1)+"\">"+conn.rs.getString(2)+"</option>";
-           }
-conn.rs.close();
-conn.st.close(); 
-            out.println(output);
+            out.println("Completed");
         }
     }
 
@@ -63,7 +50,7 @@ conn.st.close();
     try {
         processRequest(request, response);
     } catch (SQLException ex) {
-        Logger.getLogger(load_counties.class.getName()).log(Level.SEVERE, null, ex);
+        Logger.getLogger(clean_data.class.getName()).log(Level.SEVERE, null, ex);
     }
     }
 
@@ -81,7 +68,7 @@ conn.st.close();
     try {
         processRequest(request, response);
     } catch (SQLException ex) {
-        Logger.getLogger(load_counties.class.getName()).log(Level.SEVERE, null, ex);
+        Logger.getLogger(clean_data.class.getName()).log(Level.SEVERE, null, ex);
     }
     }
 
@@ -95,4 +82,5 @@ conn.st.close();
         return "Short description";
     }// </editor-fold>
 
+   
 }

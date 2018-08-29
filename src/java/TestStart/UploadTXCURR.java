@@ -5,6 +5,7 @@
  */
 package TestStart;
 
+import Data.ActionCleanData;
 import Db.OSValidator;
 import Db.dbConn;
 import java.io.File;
@@ -107,8 +108,13 @@ HttpSession session;
     }
         session.setAttribute("output", output);
 
-        System.out.println(output);
+        ActionCleanData cleandata = new ActionCleanData();
+        cleandata.clean_data();
+           
+           
+      System.out.println(output);
       response.sendRedirect("TXCURRUpload.jsp");
+      
     }
 
     // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
@@ -688,31 +694,31 @@ String header="";
             
         //check on dead cases
         if(oct_17.equalsIgnoreCase("Dead")){
-            nov_17 = dec_17 = jan_18 = feb_18 = mar_18 = apr_18 = may_18 = jun_18 = jul_18 = "";
+            nov_17 = dec_17 = jan_18 = feb_18 = mar_18 = apr_18 = may_18 = jun_18 = jul_18 = "Dead";
         }
         else if(nov_17.equalsIgnoreCase("Dead")){
-         dec_17 = jan_18 = feb_18 = mar_18 = apr_18 = may_18 = jun_18 = jul_18 = "";
+         dec_17 = jan_18 = feb_18 = mar_18 = apr_18 = may_18 = jun_18 = jul_18 = "Dead";
         }
         else if(dec_17.equalsIgnoreCase("Dead")){
-         jan_18 = feb_18 = mar_18 = apr_18 = may_18 = jun_18 = jul_18 = "";
+         jan_18 = feb_18 = mar_18 = apr_18 = may_18 = jun_18 = jul_18 = "Dead";
         }
         else if(jan_18.equalsIgnoreCase("Dead")){
-         feb_18 = mar_18 = apr_18 = may_18 = jun_18 = jul_18 = "";
+         feb_18 = mar_18 = apr_18 = may_18 = jun_18 = jul_18 = "Dead";
         }
         else if(feb_18.equalsIgnoreCase("Dead")){
-         mar_18 = apr_18 = may_18 = jun_18 = jul_18 = "";
+         mar_18 = apr_18 = may_18 = jun_18 = jul_18 = "Dead";
         }
         else if(mar_18.equalsIgnoreCase("Dead")){
-         apr_18 = may_18 = jun_18 = jul_18 = "";
+         apr_18 = may_18 = jun_18 = jul_18 = "Dead";
         }
         else if(apr_18.equalsIgnoreCase("Dead")){
-         may_18 = jun_18 = jul_18 = "";
+         may_18 = jun_18 = jul_18 = "Dead";
         }
         else if(may_18.equalsIgnoreCase("Dead")){
-         jun_18 = jul_18 = "";
+         jun_18 = jul_18 = "Dead";
         }
         else if(jun_18.equalsIgnoreCase("Dead")){
-         jul_18 = "";
+         jul_18 = "Dead";
         }
 
        if(is_ti.equals("") && no_data<10){

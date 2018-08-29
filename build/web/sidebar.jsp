@@ -71,6 +71,7 @@
                         <ul class="sub-menu children dropdown-menu">
                             <!--<li><i class="fa fa-table"></i><a href="raw_data.jsp">Test&Start Raw Data</a></li>-->
                             <li><i class="fa fa-table"></i><a href="TX_CURR_Report.jsp">Current on ART Data</a></li>
+                            <li><i class="fa fa-table"></i><a href="tx_curr_pivot.jsp">Tx Curr Pivot Data</a></li>
                         </ul>
                     </li>
 <!--                    <li class="menu-item-has-children active dropdown">

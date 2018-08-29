@@ -26,12 +26,31 @@ HttpSession session;
 String output="";
 String sub_county_where = "";
 int has_data;
+String highv;
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException, SQLException {
         response.setContentType("text/html;charset=UTF-8");
         try (PrintWriter out = response.getWriter()) {
             dbConn conn = new dbConn();
            String[] sub_county_data = request.getParameter("sub_county").split("_");
+           
+           
+              highv = request.getParameter("highv");
+           
+              
+             switch (highv) {
+                case "0":
+                    highv = "AND all_highvolume IS NULL " ;
+                    break;
+                case "1":
+                    highv="AND all_highvolume =1 ";
+                    break;
+                case "2":
+                    highv=" ";
+                    break;
+                default:
+                    break;
+            }
            
            sub_county_where = "(";
            has_data=0;
@@ -52,7 +71,7 @@ int has_data;
            
            output="<option value=\"\">Choose Facility</option>";
             
-           String getFacil = "SELECT subpartnerID,subpartnerNom FROM subpartnera WHERE "+sub_county_where+" ORDER BY subpartnerNom";
+           String getFacil = "SELECT subpartnerID,subpartnerNom FROM subpartnera WHERE "+sub_county_where+" AND art=1 AND active=1 "+highv+" ORDER BY subpartnerNom";
            conn.rs = conn.st.executeQuery(getFacil);
            while(conn.rs.next()){
                output+="<option value=\""+conn.rs.getString(1)+"\">"+conn.rs.getString(2)+"</option>";

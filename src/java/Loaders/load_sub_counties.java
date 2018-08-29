@@ -26,12 +26,30 @@ HttpSession session;
 String output="";
 String county_where = "";
 int has_data=0;
+String highv;
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException, SQLException {
         response.setContentType("text/html;charset=UTF-8");
         try (PrintWriter out = response.getWriter()) {
            dbConn conn = new dbConn();
            String[] county_data = request.getParameter("county").split("_");
+           
+           
+              highv = request.getParameter("highv");
+           
+              switch (highv) {
+                case "0":
+                    highv = "AND all_highvolume IS NULL " ;
+                    break;
+                case "1":
+                    highv="AND all_highvolume =1 ";
+                    break;
+                case "2":
+                    highv=" ";
+                    break;
+                default:
+                    break;
+            }
            
            county_where = "(";
            has_data=0;
@@ -54,7 +72,7 @@ int has_data=0;
            
            output="<option value=\"\">Choose Subcounty</option>";
             
-           String getSubCounties = "SELECT DistrictID,DistrictNom FROM district WHERE "+county_where+" ORDER BY DistrictNom";
+           String getSubCounties = "SELECT district.DistrictID,DistrictNom FROM district LEFT JOIN subpartnera ON district.DistrictID=subpartnera.DistrictID WHERE "+county_where+" AND art=1 AND subpartnera.active=1 "+highv+" GROUP BY district.DistrictID  ORDER BY district.DistrictNom";
             System.out.println("query:"+getSubCounties);
            conn.rs = conn.st.executeQuery(getSubCounties);
            while(conn.rs.next()){

@@ -1,6 +1,6 @@
 <%-- 
-    Document   : TX_CURR_Report
-    Created on : Aug 7, 2018, 4:22:58 PM
+    Document   : tx_curr_pivot
+    Created on : Aug 16, 2018, 4:03:07 PM
     Author     : GNyabuto
 --%>
 
@@ -10,7 +10,7 @@
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>TX_CURR Report</title>
+    <title>TX_CURR Pivot</title>
     <meta name="description" content="Sufee Admin - HTML5 Admin Template">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -27,8 +27,6 @@
     <link rel="stylesheet" href="assets/scss/style.css">
     <link rel="stylesheet" href="assets/js/select2/css/select2.min.css">
     <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,600,700,800' rel='stylesheet' type='text/css'>
-
-    <!-- <script type="text/javascript" src="https://cdn.jsdelivr.net/html5shiv/3.7.3/html5shiv.min.js"></script> -->
 
 </head>
 <body>
@@ -54,24 +52,20 @@
                   <div class="col-lg-12">
                     <div class="card">
                       <div class="card-header">
-                        <strong>Generate Current on ART RRI Report</strong>
+                        <strong>Generate Current on ART RRI Pivoted facility summaries</strong>
                       </div>
                       
-                        <form action="Tx_CURR" method="post" class="form-horizontal">
+                        <form action="tx_curr_pivoted" method="post" class="form-horizontal">
                          <div class="card-body card-block"> 
                              <div class="row form-group">
                                  <div class="col col-md-12"> <b style="color: red;">Note:</b> <b>ALL FIELDS ARE OPTIONAL.</b>
-                                 <br>1. To generate report for all project sites, do not select anything. Just click on <b>Generate Report</b>.
-                                 <br>2. To generate county report for some counties, select the <b>county</b> and do not select any sub-county or facility.
-                                 <br>3. To generate report for some sub-counties, select the <b>county,sub-county</b> and do not select any facility.
-                                 <br>4. To generate Facility report for some facilities, select <b>county,sub-county and then facility</b>.
-                                 
                                  </div>
                           </div>
                              
                           <div class="row form-group">
                             <div class="col col-md-3">WorkLoad</div>
-                            <div class="col-12 col-md-3"><select id="highv" name="highv" class="form-control-sm js-example-basic-multiple" style="min-width: 300px;">
+                            <div class="col-12 col-md-3">
+                                <select id="highv" name="highv" class="form-control-sm js-example-basic-multiple" style="min-width: 300px;">
                                     <option value="2" selected>All sites</option>
                                     <option value="1">High-volume sites</option>
                                     <option value="0">Non high-volume sites</option>>
