@@ -5,6 +5,7 @@
  */
 package TestStart;
 
+import Db.OSValidator;
 import Db.dbConn;
 import java.io.File;
 import java.io.FileInputStream;
@@ -12,6 +13,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Iterator;
+import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.servlet.ServletException;
@@ -78,8 +80,13 @@ String yearmonth="",year="",month="";
            fileName = getFileName(part);
             part.write(uploadFilePath + File.separator + fileName);
             
+            if(OSValidator.isWindows()){
             full_path=fileSaveDir.getAbsolutePath()+"\\"+fileName;
-            System.out.println("fullpath : "+full_path);
+            }
+            else if(OSValidator.isUnix()){
+            full_path=fileSaveDir.getAbsolutePath()+"/"+fileName;    
+            }
+//            System.out.println("fullpath : "+full_path);
            // read the contents of the workbook and sheets here
            
            FileInputStream fileInputStream = new FileInputStream(full_path);
@@ -115,12 +122,12 @@ String yearmonth="",year="",month="";
        jarray.add(objteststart);
         }
         
-        if(workbook.getSheet("3b. ART Current Net Loss-Var ")!=null){
-       worksheetARTLoss = workbook.getSheet("3b. ART Current Net Loss-Var ");
+        if(workbook.getSheet("3b. ART Current Net Loss-Var")!=null){
+       worksheetARTLoss = workbook.getSheet("3b. ART Current Net Loss-Var");
        objartcurr = ARTCurrentLoss(worksheetARTLoss,conn);  
        jarray.add(objartcurr); 
         }
-//        Account4LinkageValidationXLS(worksheetAccValid,conn);
+     //   Account4LinkageValidationXLS(worksheetAccValid,conn);
 
         //end of reading all sheets
  
@@ -132,7 +139,7 @@ String yearmonth="",year="",month="";
         }
 
         
-        System.out.println("errors : "+finalarray);
+//        System.out.println("errors : "+finalarray);
         session.setAttribute("upload_errors", finalarray);
       
       
@@ -241,10 +248,10 @@ String yearmonth="",year="",month="";
     public JSONObject CleanPeriod(String year,String month, dbConn conn) throws SQLException{
     JSONObject period_data = new JSONObject();
     String yearmonth;
-        System.out.println("year : "+year+" month: "+year);  
+//        System.out.println("year : "+year+" month: "+year);  
         
             String getmonth = "SELECT code FROM months WHERE shortname LIKE '%"+month+"%' OR fullname LIKE '%"+month+"%' ";
-            System.out.println("yearmonth query: "+getmonth);
+//            System.out.println("yearmonth query: "+getmonth);
      conn.rs = conn.st.executeQuery(getmonth);
      if(conn.rs.next()){
          month = conn.rs.getString(1);
@@ -970,7 +977,7 @@ if(rowi.getCell(9)!=null){
 
 
 // **************************************baseline cd4 cell count percentage***********************
-System.out.println("at pos : "+i+" mflcode : "+mfl_code);
+//System.out.println("at pos : "+i+" mflcode : "+mfl_code);
             Cell cell11 = rowi.getCell((short) 11);
             if(cell11!=null){
             switch (cell11.getCellType()) {
@@ -1218,6 +1225,7 @@ if(rowi.getCell(13)!=null){
      return obj_det;
     }
     public JSONObject ARTCurrentLoss (Sheet worksheet, dbConn conn) throws SQLException{
+        System.out.println("called");
     String all_error_details = "<thead class=\"thead-dark\"><tr><th>Row Number</th><th>County</th><th>Sub County</th><th>Health Facility</th><th>MFL Code</th><th>Patient CCC Number</th><th>Gender</th><th>Current Age</th><th>Date confirmed HIV Positive</th><th>Enrollment date</th><th>ART start date</th><th>Baseline WHO Stage</th><th>Baseline CD4 Count or Percent</th><th>Initial VL Result</th><th>Initial Vl Date</th><th>Repeat VL  result</th><th>Repeat VL date</th><th>VL result at 12 months</th><th>12 month Vl Date</th><th>Last visit date</th><th>Expected return date (TCA)</th><th>Patient Status</th><th>Date patient resumed Tx</th><th>Reason for Failing to Upload</th></tr></thead><tbody>";
       String id="",county="",sub_county="",facility="",mfl_code="",ccc_no="",gender="",current_age="",date_confirmed_hiv_pos="",enrollment_date="",art_start_date="",baseline_who_stage="",baseline_cd4_cell_count_perc="",initial_vl="",initial_vl_date="",repeat_vl_value="",repeat_vl_date="",vl_12_months_value="",vl_12_months_date="",last_visit_date="",expected_return_date="",patient_status="",date_resumed_tx="",reason="";
            JSONObject obj_det = new JSONObject();
@@ -1459,7 +1467,7 @@ error_details+="<td>"+art_start_date+"</td>";
 
 
 // **************************************baseline cd4 cell count percentage***********************
-System.out.println("at pos : "+i+" mflcode : "+mfl_code);
+//System.out.println("at pos : "+i+" mflcode : "+mfl_code);
             Cell cell11 = rowi.getCell((short) 11);
             if(cell11!=null){
             switch (cell11.getCellType()) {
@@ -1677,15 +1685,16 @@ error_details+="<td>"+initial_vl_date+"</td>";
     }
               error_details+="<td>"+date_resumed_tx+"</td>";
               
-               if(!date_resumed_tx.equals("")){
-            date_resumed_tx = format_date(date_resumed_tx);
- }
+//               if(!date_resumed_tx.equals("")){
+//            date_resumed_tx = format_date(date_resumed_tx);
+//                }
                
 //*******************************End of date patient resument tx************************
 
 //     generate id
 
-            id = mfl_code+"_"+yearmonth+"_"+ccc_no;
+             id = mfl_code+"_"+yearmonth+"_"+ccc_no+"_"+last_visit_date;
+            //id = randomid();
 
       //       END OF READING VALUES
 if(has_error){
@@ -1693,6 +1702,8 @@ if(has_error){
   skipped_records++;
 }
 else{
+    System.out.println("added:"+added_records);
+//    System.out.println("Entered here");
     added_records++;
             //GET CORRECT COUNTY, SUBCOUNTY DATA FOR THIS FACILITY
             JSONObject obj_facil = GetFacilityDetails(conn, mfl_code);
@@ -1702,6 +1713,7 @@ else{
               sub_county = obj_facil.get("sub_county").toString();
               facility = obj_facil.get("facility").toString();
 
+            }
                 String query = "REPLACE INTO art_current_net_loss SET id=?,year=?,month=?,county=?,sub_county=?,facility=?,mfl_code=?,ccc_no=?,gender=?,current_age=?,date_confirmed_hiv_pos=?,enrollment_date=?,art_start_date=?,baseline_who_stage=?,baseline_cd4_cell_count_perc=?,initial_vl=?,initial_vl_date=?,repeat_vl_value=?,repeat_vl_date=?,vl_12_months_value=?,vl_12_months_date=?,last_visit_date=?,yearmonth=?,expected_return_date=?,patient_status=?,date_resumed_tx=?";
                 conn.pst = conn.conn.prepareStatement(query);
                 conn.pst.setString(1, id);
@@ -1730,15 +1742,16 @@ else{
                 conn.pst.setString(24, expected_return_date);
                 conn.pst.setString(25, patient_status);
                 conn.pst.setString(26, date_resumed_tx);
-                conn.pst.executeUpdate();
+                int s = conn.pst.executeUpdate();
             
+//                System.out.println("status : "+s);
 //                System.out.println("query ART current net loss______ : "+conn.pst);
-                conn.pst.executeUpdate();
+//                conn.pst.executeUpdate();
               
-            }
-            else{
-               
-            }
+//            }
+//            else{
+//               
+//            }
         }
 //***************************************************************************
         i++;
@@ -1753,7 +1766,9 @@ else{
     }
   
     public String format_date(String date){
-        System.out.println("date is : "+date);
+        date = date.replace("--", "-");
+       System.out.println("date is : --"+date+"--");
+        if(date.length()>5){
         String indate = date;
         String yr="",mn="",dat="";
         int split=0;
@@ -1765,9 +1780,30 @@ else{
         String date_array[] = date.split("-");
         split=date_array.length;
         if(split==3){
+            if(date_array[0].length()==4){
         yr = date_array[0];
-        mn = date_array[1];
-        dat = date_array[2];
+        mn = date_array[1].replace(" ","");
+       if(Integer.parseInt(mn)<=12){
+         mn = date_array[1];
+        dat = date_array[2];   
+        }
+        else{
+        mn = date_array[2];
+        dat = date_array[1];
+        }
+            }
+            else{
+        yr = date_array[2];
+        mn = date_array[1].replace(" ","");
+       if(Integer.parseInt(mn)<=12){
+         mn = date_array[1];
+        dat = date_array[0];   
+        }
+        else{
+        mn = date_array[0];
+        dat = date_array[1];
+        }      
+            }
         }
         }
         else if(date.contains(".") || date.contains("/")){
@@ -1775,9 +1811,32 @@ else{
         String date_array[] = date.split("/");
         split=date_array.length;
         if(split==3){
+            
+             if(date_array[2].length()==4){
         yr = date_array[2];
+        mn = date_array[1].replace(" ","");
+       if(Integer.parseInt(mn)<=12){
+         mn = date_array[1];
+        dat = date_array[0];   
+        }
+        else{
         mn = date_array[0];
         dat = date_array[1];
+        } 
+            }
+            else{
+        yr = date_array[0];
+        mn = date_array[1].replace(" ","");
+       if(Integer.parseInt(mn)<=12){
+         mn = date_array[1];
+        dat = date_array[2];   
+        }
+        else{
+        mn = date_array[2];
+        dat = date_array[1];
+        }
+       
+            }
         }
         }
         
@@ -1807,12 +1866,15 @@ else{
             dat = "0"+Integer.parseInt(dat);
         }
         date = yr+"-"+mn+"-"+dat;
-           
         }
         else{
           date = indate;  
         }
-        System.out.println("Indate : "+indate+" Formatted date : "+date);
+//        System.out.println("Indate : "+indate+" Formatted date : "+date);
+    }
+        else{
+                date="";
+                }
         return date;
     }
     public void get_year_month(String date){
@@ -1905,7 +1967,20 @@ else{
           month="12";     
          }
          
-         System.out.println("month "+month+" mn :"+mn);
+//         System.out.println("month "+month+" mn :"+mn);
          return month;
+     }
+     
+     
+     public String randomid(){
+      
+         Random rand = new Random();
+
+// Obtain a number between [0 - 49].
+int n = rand.nextInt(214235450);
+int n_2 = rand.nextInt(932435450);
+int n_3 = rand.nextInt(932450);
+
+return n+"_"+n_2+"_"+n_3;
      }
 }

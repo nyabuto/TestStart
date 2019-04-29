@@ -58,7 +58,7 @@
                    <li class="menu-item-has-children active dropdown">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> <i class="menu-icon fa fa-upload"></i>Upload Data</a>
                         <ul class="sub-menu children dropdown-menu">
-                            <!--<li><i class="fa fa-upload"></i><a href="ExcelUpload.jsp">Test&Start Data</a></li>-->
+                            <li><i class="fa fa-upload"></i><a href="ExcelUpload.jsp">Test&Start Data</a></li>
                             <li><i class="fa fa-upload"></i><a href="TXCURRUpload.jsp">Upload Current on ART Data</a></li> 
                         </ul>
                     </li>

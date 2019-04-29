@@ -52,7 +52,7 @@ public  Connection conn = null;
             if (getdbsettings(mydrive) == true) {
 
                 //String myfile=getServletContext().getRealPath("/dbsettings.txt");
-
+                  System.out.println("jdbc:mysql://" + dbsetup[0] + "/" + dbsetup[1]+","+ dbsetup[2]+","+dbsetup[3]);
                 if (dbsetup[0] != null) {
 
                     if(dbsetup[3]==null){conn = DriverManager.getConnection("jdbc:mysql://" + dbsetup[0] + "/" + dbsetup[1], dbsetup[2],"");
